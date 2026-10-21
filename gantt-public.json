@@ -15,6 +15,17 @@
           "done": false
         },
         {
+          "id": "590faad6-e71f-40cd-829b-74c9b4fd3883",
+          "name": "写真整理",
+          "start": "2026-10-22",
+          "end": "2026-11-30",
+          "kind": "task",
+          "memo": "",
+          "deadline": "",
+          "done": false,
+          "tagId": "e80f318c-1051-4cec-9f99-1700b827c1d5"
+        },
+        {
           "id": "16fbec59-4549-4ad7-85c9-ecff38d01395",
           "name": "しまうまにて制作",
           "start": "2027-02-05",
