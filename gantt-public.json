@@ -1,0 +1,85 @@
+{
+  "projects": [
+    {
+      "id": "86990937-839b-46a4-9a28-5e98eaf2c8e3",
+      "name": "卒部アルバム製作",
+      "tasks": [
+        {
+          "id": "1acdd7b1-8b29-42ad-a183-6601ff9f609c",
+          "name": "卒部式",
+          "kind": "event",
+          "start": "2027-03-20",
+          "end": "2027-03-20",
+          "memo": "",
+          "deadline": "",
+          "done": false
+        },
+        {
+          "id": "16fbec59-4549-4ad7-85c9-ecff38d01395",
+          "name": "しまうまにて制作",
+          "start": "2027-02-05",
+          "end": "2027-03-04",
+          "kind": "task",
+          "memo": "",
+          "deadline": "",
+          "done": false,
+          "tagId": "d71e5525-1664-4aee-864a-9895e8c993a9"
+        },
+        {
+          "id": "ade94cff-4716-4a56-b1e4-3b52881f71fe",
+          "name": "最終チェック",
+          "start": "2027-03-05",
+          "end": "2027-03-09",
+          "kind": "task",
+          "memo": "",
+          "deadline": "",
+          "done": false,
+          "tagId": "e80f318c-1051-4cec-9f99-1700b827c1d5"
+        },
+        {
+          "id": "863f36c3-4d64-4ff5-90e2-047c9e9898d2",
+          "name": "修正",
+          "start": "2027-03-11",
+          "end": "2027-03-16",
+          "kind": "task",
+          "memo": "",
+          "deadline": "",
+          "done": false,
+          "tagId": "d71e5525-1664-4aee-864a-9895e8c993a9"
+        }
+      ],
+      "collapsed": false
+    }
+  ],
+  "links": [
+    {
+      "id": "414e087e-fb9a-4975-8257-bf1fcd95387a",
+      "from": "16fbec59-4549-4ad7-85c9-ecff38d01395",
+      "to": "ade94cff-4716-4a56-b1e4-3b52881f71fe",
+      "type": "FS"
+    },
+    {
+      "id": "a98112f4-f14d-4be0-bf1a-a45fce17f534",
+      "from": "ade94cff-4716-4a56-b1e4-3b52881f71fe",
+      "to": "863f36c3-4d64-4ff5-90e2-047c9e9898d2",
+      "type": "FS"
+    }
+  ],
+  "tags": [
+    {
+      "id": "6ca58554-c7cc-426f-bdae-4a84b2b20f14",
+      "name": "チーム内依頼作業",
+      "color": "#D8C7EE"
+    },
+    {
+      "id": "e80f318c-1051-4cec-9f99-1700b827c1d5",
+      "name": "担当者作業",
+      "color": "#BDE4CB"
+    },
+    {
+      "id": "d71e5525-1664-4aee-864a-9895e8c993a9",
+      "name": "外注",
+      "color": "#F4BEC7"
+    }
+  ]
+}
