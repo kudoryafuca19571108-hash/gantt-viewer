@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JointClear 3D v2.0</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"}}</script>
+<style>
+:root{font-family:system-ui,'Yu Gothic',Meiryo,sans-serif;color:#e8f1fb;background:#0a1220}
+*{box-sizing:border-box}body{margin:0}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 18px;background:#101c2d;border-bottom:1px solid #274058}
+.logo{font-size:19px;font-weight:800}.logo span{color:#58c5f1}.subtitle{font-size:12px;color:#a6b8cb}
+button,input,select{font:inherit}button{border:1px solid #3b566f;background:#20384f;color:#eef7ff;border-radius:8px;padding:7px 10px;cursor:pointer}button:hover{background:#2d4d69}button.primary{background:#0a6f9d}
+.layout{display:grid;grid-template-columns:355px minmax(420px,1fr) 320px;min-height:calc(100vh - 70px)}
+aside{padding:12px;overflow:auto;max-height:calc(100vh - 70px)}.left{border-right:1px solid #283d55}.right{border-left:1px solid #283d55}
+.center{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+details{background:#132338;border:1px solid #2e475f;border-radius:10px;margin-bottom:10px}summary{padding:11px;font-size:13px;font-weight:700;cursor:pointer}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 10px 12px}label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#b8c7d7}label.wide{grid-column:span 2}label.triple{grid-column:span 2;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}
+input,select{width:100%;padding:7px;border-radius:6px;background:#0b1827;border:1px solid #38546d;color:#eef6ff;font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.tabs{display:flex;gap:6px}.tabs button.active{background:#0b77a8;border-color:#21a1d1}
+.view{background:radial-gradient(ellipse at center,#1e3349,#0b1624);border:1px solid #34485c;border-radius:10px;position:relative;min-height:560px;overflow:hidden;flex:1}.view canvas{width:100%;height:100%;display:block;touch-action:none}.three-view{position:absolute;inset:0;display:none;touch-action:none}.three-view canvas{width:100%;height:100%;display:block}.view.is-three #cv{visibility:hidden}.view.is-three .three-view{display:block}.model-controls{background:#132338;border:1px solid #2f4861;border-radius:10px;padding:10px}.model-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.model-grid label{display:flex;flex-direction:row;align-items:center;gap:5px;font-size:11px}.model-grid input{width:auto}.model-controls input[type=range]{width:160px}@media(max-width:670px){.model-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tip{position:absolute;left:12px;bottom:10px;font-size:11px;color:#b7cadb;pointer-events:none}.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#b7cadb}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.note{font-size:11px;color:#9fb2c5;background:#122238;border:1px solid #2c4258;border-radius:9px;padding:9px}
+.panel{background:#132338;border:1px solid #2f4861;border-radius:10px;padding:10px;margin-bottom:10px}.panel h3{margin:0 0 8px;font-size:14px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{background:#13263a;border:1px solid #2d4258;border-radius:9px;padding:10px}.metric strong{font-size:24px}.metric small{display:block;color:#aebfd0}
+.good{color:#75e1b6}.error{color:#ff7a83}.muted{color:#9fb2c5}
+.list{max-height:350px;overflow:auto}.row{padding:7px 2px;border-bottom:1px solid #29415a;font-size:12px;cursor:pointer}.row:hover{background:#20364f}.pill{display:inline-block;background:#1c3349;border:1px solid #34516d;border-radius:999px;padding:2px 8px;font-size:11px;color:#c6d6e6}
+.small{font-size:11px;color:#9db0c3}.hidden{display:none !important}
+@media (max-width:1280px){.layout{grid-template-columns:325px 1fr}.right{grid-column:1/span 2;border-left:none;border-top:1px solid #283d55;max-height:none}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">JointClear <span>3D</span> <span id="appVersion"></span></div>
+    <div class="subtitle">基礎部 / 一般部・RC柱 / S柱・平面 / 断面 / 3D・ドラッグ調整・あき確認</div>
+  </div>
+  <div class="toolbar">
+    <button id="dxfBtn" class="primary">2D DXF出力</button>
+    <button id="rhinoBtn" class="primary">Rhino 3DM出力</button>
+    <button id="saveBtn">JSON保存</button>
+    <button id="loadBtn">JSON読込</button>
+    <button id="csvBtn">干渉CSV出力</button>
+    <button id="historyBtn">更新履歴</button>
+    <button id="resetBtn">初期化</button>
+    <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+  </div>
+</header>
+<dialog id="historyDialog" style="max-width:700px;width:92%;max-height:82vh;overflow:auto;background:#132338;color:#e8f1fb;border:1px solid #53687e;border-radius:12px;padding:20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 style="margin:0;font-size:18px">JointClear 3D 更新履歴</h2><button id="closeHistory">閉じる</button></div>
+  <div id="historyContent" style="font-size:13px;line-height:1.8;margin-top:14px"></div>
+</dialog>
+<div class="layout">
+  <aside class="left">
+    <details open>
+      <summary>基本設定</summary>
+      <div class="fields">
+        <label><span>部位</span><select data-k="partMode" id="partMode"><option value="foundation">基礎部</option><option value="general">一般部</option></select></label>
+        <label><span>柱種別</span><select data-k="columnType" id="columnType"><option value="rc">RC柱</option><option value="steel">S柱</option></select></label>
+        <label><span>柱脚形式</span><input value="露出柱脚（固定）" disabled></label>
+        <label class="wide"><span>必要あき：隣接2本の呼び径平均×1.5（自動）</span><div class="small">主筋の表面間あき。粗骨材・最小絶対値は本バージョンでは未加算。</div></label>
+
+        
+        <label class="wide"><span>躯体高さ：FLレベルから自動算出</span><div id="elevationSummary" class="pill"></div></label>
+        <label><span>表示スケール</span><input data-k="drawScale" type="number" step="0.1"></label>
+        
+        
+        <label class="wide"><span>備考</span><div class="small" id="modeNote"></div></label>
+      </div>
+    </details>
+
+    <details open><summary>高さ設定（FL = 0 mm）</summary><div class="fields">
+      <label><span>X方向梁天端 FL± (mm)</span><input data-k="bxTopFL" type="number" step="any"></label>
+      <label><span>Y方向梁天端 FL± (mm)</span><input data-k="byTopFL" type="number" step="any"></label>
+      <label><span>杭頭レベル FL± (mm)</span><input data-k="pileHeadFL" type="number" step="any"></label>
+      <label><span>礎柱レベル</span><span class="small">礎柱欄から個別入力</span></label>
+      <label class="wide"><span>レベル定義</span><div class="small">礎柱高さ＝礎柱天端−礎柱下端。梁芯＝梁天端−梁せい/2。負値はFLより下方。</div></label>
+    </div></details>
+    <details open id="pileSec">
+      <summary>杭頭・杭主筋</summary>
+      <div class="fields">
+        <label><span>杭種別</span><select data-k="pileType"><option value="precast">既製杭</option><option value="castinplace">場所打ち杭</option></select></label>
+        <label><span>杭頭接合方式</span><select data-k="pileJoint"><option value="rebar">杭頭補強筋</option><option value="ft">F.T.Pile</option></select></label>
+<label class="wide"><span id="ftNote" class="small">F.T.Pileの引抜き鋼棒は円周等配・直線近似。実際の仕様はメーカー資料で照合。</span></label>
+<label id="ftModeWrap">F.T.Pile 引抜鋼棒<select data-k="ftMode"><option value="with">引抜鋼棒あり</option><option value="without">引抜鋼棒なし</option></select></label>
+<label id="ftCountWrap">引抜き鋼棒 本数<input data-k="ftN" type="number" min="0"></label>
+<label id="ftDiaWrap">引抜き鋼棒径(mm)<input data-k="ftDia" type="number"></label>
+<label id="ftLengthWrap">引抜き鋼棒 長さ(mm)<input data-k="ftLength" type="number"></label>
+<label id="ftAngleWrap">円周回転(°、5°刻み)<input data-k="ftAngle" type="number" min="-360" max="360" step="5"></label>
+<label><span>杭径(mm)</span><input data-k="pileD" type="number" step="10"></label>
+        <label><span>主筋/補強筋 本数</span><input data-k="pileN" type="number" step="1"></label>
+        <label><span>鉄筋径(mm)</span><input data-k="pileBar" type="number" step="1"></label>
+        <label><span>配置半径(mm)</span><input data-k="pileR" type="number" step="5"></label>
+        <label><span>全体回転角(°)</span><input data-k="pileAngle" type="number" step="5"></label>
+        <label><span>中心X偏心(mm)</span><input data-k="pileX" type="number" step="5"></label>
+        <label><span>中心Y偏心(mm)</span><input data-k="pileY" type="number" step="5"></label>
+        <label><span>杭筋 直線部下端FL±(mm)</span><input data-k="pileZ0" type="number" step="10"></label>
+        <label><span>杭筋 直線部上端FL±(mm)</span><input data-k="pileZ1" type="number" step="10"></label>
+        <label id="pileHookWrap"><span>場所打ち杭 フック長(mm)</span><input data-k="pileDev" type="number" step="10"></label>
+        <label><span>杭躯体 表示深さ(mm)</span><input data-k="pileConcreteDepth" type="number" min="1"></label><label class="wide"><span class="small">杭筋の直線部上下端は手入力値を保持。杭頭FL変更時も自動移動しません。F.T.Pileは杭頭から指定長さの直線モデル。杭躯体は杭頭から表示深さまでです。</span></label><label class="wide"><button id="equalPile">杭頭筋を均等再配置</button></label>
+      </div>
+    </details>
+
+    <details open id="pedSec"><summary>礎柱（基礎部・個別入力）</summary><div class="fields">
+<label>天端 FL± (mm)<input data-k="pedTopFL" type="number" step="any" inputmode="decimal"></label>
+<label>下端 FL± (mm)<input data-k="pedBottomFL" type="number" step="any" inputmode="decimal"></label>
+<label>X寸法(mm)<input data-k="pedX" type="number"></label><label>Y寸法(mm)<input data-k="pedY" type="number"></label>
+<label>X辺 主筋本数<input data-k="pedNX" type="number" min="2"></label><label>Y辺 主筋本数<input data-k="pedNY" type="number" min="2"></label>
+<label>主筋呼び径<select data-k="pedBar" class="rebarSel"></select></label><label>フープ呼び径<select data-k="pedHoopDia" class="rebarSel"></select></label>
+<label>フープピッチ(mm)<select data-k="pedHoopPitch" class="hoopSel"></select></label></div></details>
+<details open id="rcColSec"><summary>上部柱 / 下部柱（それぞれ独立）</summary><div class="fields">
+<label>下部柱 X寸法(mm)<input data-k="lowerX" type="number"></label><label>下部柱 Y寸法(mm)<input data-k="lowerY" type="number"></label>
+<label>下部柱 下端FL±<input data-k="lowZ0" type="number" step="any"></label><label>下部柱 上端FL±<input data-k="lowZ1" type="number" step="any"></label>
+<label>下部柱 X辺主筋本数<input data-k="lowNX" type="number"></label><label>下部柱 Y辺主筋本数<input data-k="lowNY" type="number"></label>
+<label>下部柱 主筋呼び径<select data-k="lowBar" class="rebarSel"></select></label><label>下部柱 フープ径<select data-k="hoopDia" class="rebarSel"></select></label>
+<label>下部柱 フープピッチ(mm)<select data-k="hoopPitch" class="hoopSel"></select></label>
+
+<label>上部柱 X寸法(mm)<input data-k="upperX" type="number"></label><label>上部柱 Y寸法(mm)<input data-k="upperY" type="number"></label>
+<label>上部柱 下端FL±<input data-k="upZ0" type="number" step="any"></label><label>上部柱 上端FL±<input data-k="upZ1" type="number" step="any"></label>
+<label>上部柱 X辺主筋本数<input data-k="upNX" type="number"></label><label>上部柱 Y辺主筋本数<input data-k="upNY" type="number"></label>
+<label>上部柱 主筋呼び径<select data-k="upBar" class="rebarSel"></select></label><label>上部柱 フープ径<select data-k="upHoopDia" class="rebarSel"></select></label>
+<label>上部柱 フープピッチ(mm)<select data-k="upHoopPitch" class="hoopSel"></select></label>
+<label class="wide">上下柱主筋の納まり<select data-k="colJoint"><option value="through">通し（下部柱上端＝上部柱下端で接続）</option><option value="anchor">定着（各主筋の端部にフック）</option></select></label>
+<label class="wide"><span id="colJointNote" class="small"></span></label>
+<label id="devLenWrap">定着長(mm)<input data-k="devLen" type="number"></label><label id="hookLenWrap">フック長(mm)<input data-k="hookLen" type="number"></label>
+<label id="hookDirWrap">フック方向<select data-k="hookDir"><option value="inward">内向き</option><option value="cw">時計回り</option><option value="ccw">反時計回り</option></select></label>
+<label class="wide"><button id="equalCols">RC柱・礎柱を均等再配置</button></label>
+</div></details>
+    <details open id="upperFoundationSec"><summary>上部RC柱（基礎部）</summary><div class="fields"><label class="wide" style="flex-direction:row;align-items:center;gap:8px"><input data-k="showUpperRC" type="checkbox" style="width:auto">上部RC柱主筋・フープを表示（基礎部）</label>
+<label>X断面(mm)<input data-k="upperX" type="number"></label><label>Y断面(mm)<input data-k="upperY" type="number"></label>
+<label>下端 FL±(mm)<input data-k="upZ0" type="number" step="any"></label><label>上端 FL±(mm)<input data-k="upZ1" type="number" step="any"></label>
+<label>X辺主筋本数<input data-k="upNX" type="number"></label><label>Y辺主筋本数<input data-k="upNY" type="number"></label>
+<label>主筋径<select data-k="upBar" class="rebarSel"></select></label><label>フープ径<select data-k="upHoopDia" class="rebarSel"></select></label>
+<label>フープピッチ(mm)<select data-k="upHoopPitch" class="hoopSel"></select></label>
+</div></details>
+    <details open id="steelSec">
+      <summary>S柱・アンカーボルト</summary>
+      <div class="fields"><label><span>鋼材断面種類</span><select data-k="steelShape" id="steelShape"><option value="rhs">角形鋼管</option><option value="chs">円形鋼管</option><option value="h">H形鋼</option></select></label><label><span>鋼種 / 製品規格</span><select data-k="steelGrade" id="steelGrade"></select></label><label class="wide"><span>断面寸法 (mm)</span><select id="steelCatalog"></select></label><label class="wide"><span>断面検索（寸法・板厚）</span><input id="steelSearch" placeholder="例: 400, 12, 600×200"></label><label class="wide"><span id="steelDetail" class="small"></span></label></div>
+      <div class="fields"><label><span>柱脚システム</span><select data-k="footingSystem" id="footingSystem"><option value="conventional">在来柱脚（手入力）</option><option value="manufacturer">メーカー品（コーナー集約）</option></select></label></div>
+      <div class="fields">
+        <label class="wide" id="cornerSettings"><span>各コーナーのアンカー配置</span><div class="small">四隅の集約位置を、プレート中心からのX/Y距離と各隅の本数・ピッチで設定</div></label>
+<label id="cornerNWrap"><span>1コーナーの本数</span><select data-k="cornerN"><option value="1">1本</option><option value="2">2本</option><option value="3">3本</option><option value="4">4本</option></select></label>
+<label id="cornerPXWrap"><span>集約内Xピッチ(mm)</span><input data-k="cornerPX" type="number" step="5"></label>
+<label id="cornerPYWrap"><span>集約内Yピッチ(mm)</span><input data-k="cornerPY" type="number" step="5"></label>
+<label><span>ベースプレート X(mm)</span><input data-k="bpX" type="number" step="10"></label>
+        <label><span>ベースプレート Y(mm)</span><input data-k="bpY" type="number" step="10"></label>
+        <label><span>ベースプレート 厚さ(mm)</span><input data-k="bpT" type="number" min="1" step="1"></label><label><span>アンカー X列数</span><input data-k="anNX" type="number" step="1"></label>
+        <label><span>アンカー Y列数</span><input data-k="anNY" type="number" step="1"></label>
+        <label><span id="anPXLabel">アンカー Xピッチ(mm)</span><input data-k="anPX" type="number" step="5"></label>
+        <label><span id="anPYLabel">アンカー Yピッチ(mm)</span><input data-k="anPY" type="number" step="5"></label>
+        <label><span>アンカー径(mm)</span><input data-k="anBar" type="number" step="1"></label>
+        <label><span>アンカー下端Z(mm)</span><input data-k="anZ0" type="number" step="10"></label>
+        <label><span>アンカー上端Z(mm)</span><input data-k="anZ1" type="number" step="10"></label>
+        <label class="wide"><button id="equalAnchors">アンカーを均等再配置</button></label>
+      </div>
+    </details>
+
+    <details open>
+      <summary>X方向梁 / 基礎梁</summary><div class="fields"><label class="wide">組立順序<select data-k="bxOrder" id="bxOrder"><option value="first">先組</option><option value="second">後組</option></select></label><button id="copyXtoY" class="wide">Y方向梁をコピー</button></div>
+      <div class="fields">
+        <label><span>梁幅(mm)</span><input data-k="bxW" type="number" step="10"></label>
+        <label><span>梁せい(mm)</span><input data-k="bxH" type="number" step="10"></label>
+        <label><span>上端筋本数</span><input data-k="bxNTop" type="number" step="1"></label>
+        <label><span>下端筋本数</span><input data-k="bxNBot" type="number" step="1"></label>
+        <label><span>主筋径(mm)</span><input data-k="bxBar" type="number" step="1"></label>
+        <label><span>段数(1-3)</span><input data-k="bxLayers" type="number" min="1" max="3" step="1"></label>
+        <label><span>段間隔</span><input value="2.5d（固定）" disabled></label>
+        <label><span>スターラップ径(mm)</span><input data-k="bxStirDia" type="number" step="1"></label>
+        <label><span>スターラップピッチ(mm)</span><select data-k="bxStirPitch" class="stirSel"></select></label>
+        <label class="wide"><span>梁芯Z：天端FLと梁せいから自動算出</span><div id="bxCenterText" class="pill"></div></label>
+        <label><span>梁芯Y偏心(mm)</span><input data-k="bxOff" type="number" step="5"></label>
+        <label class="wide"><button id="equalBX">X梁主筋を均等再配置</button></label>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Y方向梁 / 基礎梁</summary><div class="fields"><label class="wide">組立順序<select data-k="byOrder" id="byOrder"><option value="first">先組</option><option value="second">後組</option></select></label><button id="copyYtoX" class="wide">X方向梁をコピー</button></div>
+      <div class="fields">
+        <label><span>梁幅(mm)</span><input data-k="byW" type="number" step="10"></label>
+        <label><span>梁せい(mm)</span><input data-k="byH" type="number" step="10"></label>
+        <label><span>上端筋本数</span><input data-k="byNTop" type="number" step="1"></label>
+        <label><span>下端筋本数</span><input data-k="byNBot" type="number" step="1"></label>
+        <label><span>主筋径(mm)</span><input data-k="byBar" type="number" step="1"></label>
+        <label><span>段数(1-3)</span><input data-k="byLayers" type="number" min="1" max="3" step="1"></label>
+        <label><span>段間隔</span><input value="2.5d（固定）" disabled></label>
+        <label><span>スターラップ径(mm)</span><input data-k="byStirDia" type="number" step="1"></label>
+        <label><span>スターラップピッチ(mm)</span><select data-k="byStirPitch" class="stirSel"></select></label>
+        <label class="wide"><span>梁芯Z：天端FLと梁せいから自動算出</span><div id="byCenterText" class="pill"></div></label>
+        <label><span>梁芯X偏心(mm)</span><input data-k="byOff" type="number" step="5"></label>
+        <label class="wide"><button id="equalBY">Y梁主筋を均等再配置</button></label>
+      </div>
+    </details>
+  </aside>
+
+  <main class="center">
+    <div class="toolbar">
+      <div class="tabs">
+        <button id="planTab" class="active">平面図</button>
+        <button id="sectionTab">断面図</button>
+        <button id="view3dTab">3D</button>
+      </div>
+      <button id="fitBtn">表示リセット</button>
+      <label style="display:flex;align-items:center;gap:6px">断面 <select id="secAxis"><option value="x">X断面 (Y-Z)</option><option value="y">Y断面 (X-Z)</option></select></label>
+      <label style="display:flex;align-items:center;gap:6px">Zスライス <input id="sliceZ" type="range" min="-600" max="2000" step="10" value="400" style="width:150px"></label>
+      <span id="sliceLabel" class="pill">Z = 400 mm</span>
+    </div>
+    <section class="view">
+      <canvas id="cv"></canvas>
+      <div id="threeHost" class="three-view"></div><div class="tip" id="tip">平面：鉄筋をドラッグで位置調整（1mm単位）。空白ドラッグで移動、ホイール／ピンチで拡大。</div>
+    </section>
+    <div class="model-controls" id="threeControls" style="display:none">
+       <div class="toolbar" style="justify-content:space-between;margin-bottom:8px"><strong style="font-size:13px">3D表示フィルター</strong><span id="threeStatus" class="small">3Dエンジン読込中</span></div>
+       <div class="model-grid">
+        <label><input type="checkbox" data-show="rc" checked>柱主筋</label>
+        <label><input type="checkbox" data-show="bx" checked>X梁主筋</label>
+        <label><input type="checkbox" data-show="by" checked>Y梁主筋</label>
+        <label><input type="checkbox" data-show="pile" checked>杭頭・杭主筋</label>
+        <label><input type="checkbox" data-show="anchor" checked>アンカー</label>
+        <label><input type="checkbox" data-show="tie" checked>フープ・スターラップ</label>
+        <label><input type="checkbox" data-show="concrete" checked>コンクリート</label>
+        <label><input type="checkbox" data-show="clash" checked>干渉強調</label>
+       </div>
+       <div class="toolbar" style="margin-top:9px"><span class="small">コンクリート透明度</span><input type="range" id="concreteAlpha" min="0" max="90" value="18" step="5"><strong id="alphaText" style="font-size:12px">18%</strong><button id="threeReset">視点を初期化</button></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#35c3ef"></i>杭頭補強筋 / 杭主筋</span>
+      <span><i style="background:#74ddac"></i>RC柱主筋</span>
+      <span><i style="background:#e9b55e"></i>X方向梁主筋</span>
+      <span><i style="background:#cb98f2"></i>Y方向梁主筋</span>
+      <span><i style="background:#ebf1f8"></i>アンカーボルト</span>
+      <span><i style="background:#7c8ca0"></i>フープ・スターラップ</span>
+      <span><i style="background:#ff686f"></i>干渉・あき不足</span>
+      <span><i style="background:#fff0a0"></i>選択中（3D）</span>
+    </div>
+    <div class="note" id="modelNote"></div><div class="note hidden" id="validationStatus" role="status" style="color:#ffb5b5;white-space:pre-line"></div>
+    <div class="note" id="exportStatus">DXFは平面・X断面・Y断面の2D図をモデル空間に横並びで出力（mm、円・線・ポリライン）。3DMは3Dモデル。3DM初回出力には通信が必要です。</div>
+  </main>
+
+  <aside class="right">
+    <div class="metrics">
+      <div class="metric"><strong id="issueCount" class="error">0</strong><small>干渉・必要あき不足</small></div>
+      <div class="metric"><strong id="selName" class="good">未選択</strong><small>選択中部材</small></div>
+    </div>
+
+    <div class="panel">
+      <h3>選択中部材の調整</h3>
+      <div class="controls">
+        <label><span>Xオフセット(mm)</span><input id="adjX" type="number" step="1"></label>
+        <label><span>Yオフセット(mm)</span><input id="adjY" type="number" step="1"></label>
+      </div>
+      <div class="toolbar" style="margin-top:8px">
+        <button id="applyAdj">反映</button>
+        <button id="clearAdj">選択部材を初期位置へ</button>
+      </div>
+      <div class="small" style="margin-top:8px">梁主筋は原則として梁幅方向への調整を想定。フックを含む鉄筋は親鉄筋単位で移動します。かぶり・断面への納まりの警告も確認してください。</div>
+    </div>
+
+    <div class="panel">
+      <h3>判定ルール</h3>
+      <div id="ruleText" class="small"></div>
+    </div>
+
+    <div class="panel">
+      <h3>問題一覧</h3>
+      <div id="issues" class="list"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+'use strict';
+const APP_VERSION='2.0';
+const MODEL_SCHEMA=2;
+let inputWarnings=[],modelWarnings=[],rejectedCols=new Set();
+function modelWarn(message){message=message.replace(/^(ped|low|up|bx|by):/,(_,p)=>({ped:'礎柱',low:'下部柱',up:'上部柱',bx:'X梁',by:'Y梁'}[p])+':');if(!modelWarnings.includes(message))modelWarnings.push(message)}
+const DEFAULT={
+  pedBottomFL:-1450,pedX:900,pedY:900,pedNX:5,pedNY:5,pedBar:32,pedHoopDia:13,pedHoopPitch:100,lowerX:900,lowerY:900,upperX:900,upperY:900,upZ0:0,upZ1:1600,showUpperRC:false,upHoopDia:13,upHoopPitch:100,pileJoint:'rebar',ftMode:'with',ftN:8,ftDia:25,ftLength:900,ftAngle:0,partMode:'foundation',columnType:'rc',baseType:'exposed',minGap:40,
+  bxTopFL:0,byTopFL:0,pileHeadFL:-1450,pedTopFL:0,steelShape:'rhs',steelGrade:'BCR295',steelSpec:0,footingSystem:'conventional',cornerN:2,cornerPX:90,cornerPY:90,neoModel:'EB300-4-30',bpT:32,
+  colX:900,colY:900,steelX:400,steelY:400,storyH:1600,drawScale:1,
+  colCover:50,beamCover:50,
+  pileType:'precast',pileD:600,pileN:12,pileBar:25,pileR:250,pileAngle:0,pileX:0,pileY:0,pileZ0:-1800,pileZ1:-550,pileDev:250,pileConcreteDepth:500,
+  lowNX:5,lowNY:5,lowBar:32,hoopDia:13,hoopPitch:100,lowZ0:-1800,lowZ1:0,colJoint:'through',
+  upNX:5,upNY:5,upBar:32,devLen:550,hookLen:180,hookDir:'inward',
+  bpX:650,bpY:650,anNX:4,anNY:4,anPX:220,anPY:220,anBar:36,anZ0:-1450,anZ1:250,
+  bxOrder:'first',byOrder:'second',bxW:650,bxH:900,bxNTop:4,bxNBot:4,bxBar:29,bxLayers:2,bxLayerPitch:75,bxStirDia:13,bxStirPitch:150,bxCZ:700,bxOff:0,
+  byW:650,byH:900,byNTop:4,byNBot:4,byBar:29,byLayers:2,byLayerPitch:75,byStirDia:13,byStirPitch:150,byCZ:700,byOff:0
+};
+let cfg={...DEFAULT},adjust={},selected=null,viewMode='plan',secAxis='x',yaw=-0.7,pitch=0.55,zoom=1,pan={x:0,y:0},items=[],issues=[],issueSet=new Set(),drag=null,lastPickCycle=0,lastPickKey='';
+const colors={pile:'#35c3ef',rc:'#74ddac',bx:'#e9b55e',by:'#cb98f2',anchor:'#ebf1f8',tie:'#7c8ca0',steel:'#88a4bf',alert:'#ff686f',selected:'#fff0a0'};
+// v2.0: 3D（Three.js）と3DMレイヤも凡例と同じ色を使用
+const LAYER_RGB={...colors,concrete:'#a6b7c6',clash:colors.alert};
+const el=id=>document.getElementById(id), fields=[...document.querySelectorAll('[data-k]')], canvas=el('cv'), ctx=canvas.getContext('2d');
+
+// Catalog structure: sizes are nominal candidates for coordination, NOT a verified exhaustive maker stock list.
+// Specific available steel grade / size / thickness combinations must be checked against manufacturer tables.
+const GRADES={rhs:['BCR295','BCP235','BCP325','BCP325T','JBCR385','BCP385'],chs:['STK400','STK490','STKN400W','STKN400B','STKN490B'],h:['SS400','SN400B','SN490B','SM490A']};
+const RHS_BCR={200:[6,8,9,12],250:[6,8,9,12,16],300:[6,9,12,16,19],350:[9,12,16,19],400:[9,12,16,19,22],450:[12,16,19,22],500:[12,16,19,22],550:[16,19,22]};
+const RHS_BCP={300:[9,12,16,19,22],350:[9,12,16,19,22],400:[9,12,16,19,22,25],450:[12,16,19,22,25],500:[12,16,19,22,25,28],550:[12,16,19,22,25,28],600:[12,16,19,22,25,28,32],650:[16,19,22,25,28,32],700:[16,19,22,25,28,32,36],750:[19,22,25,28,32,36],800:[19,22,25,28,32,36,40],850:[22,25,28,32,36,40],900:[22,25,28,32,36,40],950:[25,28,32,36,40],1000:[25,28,32,36,40]};
+const CIRCULAR={
+  114.3:[3.2,4.0,5.0],139.8:[3.6,4.0,4.5,6.0],165.2:[4.5,5.0,6.0,7.1],190.7:[5.3,6,7,8],216.3:[4.5,5.8,6,7,8.2],241.8:[6.2,7,8,9],267.4:[6,6.6,7,8,9.3],318.5:[6,6.9,7.9,9,10.3,12.7],355.6:[6.4,7.9,9.5,12.7],406.4:[6.4,7.9,9.5,12.7,16],457.2:[6.4,7.9,9.5,12.7,16],508:[6.4,7.9,9.5,12.7,16],558.8:[9.5,12.7,16],609.6:[9.5,12.7,16,19],660.4:[9.5,12.7,16,19],711.2:[9.5,12.7,16,19],762:[9.5,12.7,16,19],812.8:[12.7,16,19],914.4:[12.7,16,19],1016:[16,19,22]};
+// Rolled-H nominal size series, representative JIS G 3192 / manufacturer tables, including narrow/medium/wide flanges.
+const ROLLED_H=[
+[100,50,5,7],[100,100,6,8],[125,60,6,8],[125,125,6.5,9],[150,75,5,7],[150,150,7,10],[175,90,5,8],[175,175,7.5,11],
+[198,99,4.5,7],[200,100,5.5,8],[200,150,6,9],[200,200,8,12],[248,124,5,8],[250,125,6,9],[250,175,7,11],[250,250,9,14],
+[298,149,5.5,8],[300,150,6.5,9],[300,200,8,12],[300,300,10,15],[346,174,6,9],[350,175,7,11],[350,250,9,14],[350,350,12,19],
+[396,199,7,11],[400,200,8,13],[400,300,10,16],[400,400,13,21],[414,405,18,28],[428,407,20,35],
+[440,300,11,18],[446,199,8,12],[450,200,9,14],[450,300,11,18],
+[496,199,9,14],[500,200,10,16],[500,300,11,18],[506,201,11,19],
+[540,300,12,19],[550,200,10,16],[550,300,12,19],
+[588,300,12,20],[594,302,14,23],[596,199,10,15],[600,200,11,17],[600,300,12,20],
+[650,300,12,20],[692,300,13,20],[700,300,13,24],[750,250,12,19],[750,300,13,24],
+[792,300,14,22],[800,300,14,26],[890,299,15,23],[900,300,16,28]
+];
+function steelArray(){
+ if(cfg.steelShape==='h')return ROLLED_H;
+ if(cfg.steelShape==='chs')return Object.entries(CIRCULAR).flatMap(([d,ts])=>ts.map(th=>[Number(d),th]));
+ let obj=cfg.steelGrade.startsWith('BCR')||cfg.steelGrade.startsWith('JBCR')?RHS_BCR:RHS_BCP;
+ return Object.entries(obj).flatMap(([s,ts])=>ts.filter(th=>!(cfg.steelGrade==='BCP325T'&&th<12)).map(th=>[Number(s),Number(s),th]));
+}
+const STEEL_CATALOG={get rhs(){return steelArray()},get chs(){return steelArray()},get h(){return steelArray()}};
+const NEO_CATALOG=[
+ ['EB200-4-24',200,4,24,340,260,0,25],['EB250-4-30',250,4,30,410,320,0,32],
+ ['EB250-8-30',250,8,30,450,360,190,40],['EB300-4-30',300,4,30,460,370,0,32],
+ ['EB300-8-30',300,8,30,500,410,240,36],['EB300-8-36',300,8,36,510,420,220,44],
+ ['EB350-4-30',350,4,30,510,420,0,32],['EB350-8-30',350,8,30,550,460,290,36],
+ ['EB350-8-36',350,8,36,560,470,270,40],['EB400-8-30',400,8,30,600,510,340,36],
+ ['EB400-8-36',400,8,36,610,520,320,40],
+ ['GB350-8-36',350,8,36,560,470,270,65],['GB350-8-42',350,8,42,590,480,260,70],['GB400-4-42',400,4,42,600,490,0,75],['GB400-8-36',400,8,36,610,520,320,60],['GB400-8-42',400,8,42,640,530,310,70]
+];
+function neoCurrent(){return NEO_CATALOG.find(x=>x[0]===cfg.neoModel)||NEO_CATALOG[3]}
+function neoPositions(){const [id,sz,n,d,A,C1,C2]=neoCurrent();const c=C1/2;
+ if(n===4)return [[-c,-c],[-c,c],[c,-c],[c,c]];
+ // 8-bolt EB: four corners + four near centerline at the top and bottom
+ const b=C2/2;return [[-c,-c],[-c,c],[c,-c],[c,c],[-b,-c],[b,-c],[-b,c],[b,c]];
+}
+function applyNeo(){if(cfg.footingSystem!=='neo'||cfg.steelShape!=='rhs')return; const [id,sz,n,d,A,C1,C2,t2]=neoCurrent(); cfg.bpX=A;cfg.bpY=A;cfg.bpT=t2;cfg.anBar=d;cfg.steelGrade='BCR295';const ix=steelArray().findIndex(v=>v[0]===sz&&v[1]===sz);if(ix>=0)cfg.steelSpec=ix; cfg.anNX=n;cfg.anNY=1;cfg.anPX=C1;cfg.anPY=C1;clearFamily('an_')}
+function updateNeoUI(){let list=el('neoModel');list.innerHTML=NEO_CATALOG.map(x=>`<option value="${x[0]}">${x[0]}</option>`).join('');list.value=cfg.neoModel;
+ const neo=cfg.footingSystem==='neo'; list.disabled=!neo || cfg.steelShape!=='rhs';
+ const n=neoCurrent();el('neoDetail').textContent=neo&&cfg.steelShape!=='rhs'?'現収録のNEO型番は角形鋼管用EB/GBのみ。円形鋼管・H形鋼は在来柱脚を選択してください。':neo?`メーカー表：${n[0]} / BP ${n[4]}×${n[4]}×${n[7]} / アンカー ${n[2]}-M${n[3]} / C1=${n[5]} / C2=${n[6]||'―'}（位置は概略）`:'在来柱脚：寸法を個別入力';
+ ['bpX','bpY','anNX','anNY','anPX','anPY','anBar'].forEach(k=>{const e=document.querySelector(`[data-k="${k}"]`);if(e)e.disabled=neo});
+ ['colX','colY'].forEach(k=>{const e=document.querySelector(`[data-k="${k}"]`);if(e)e.disabled=cfg.columnType==='steel'});
+}
+function steelEntry(){const arr=steelArray();return arr[Math.min(Math.max(0,Math.round(cfg.steelSpec)||0),arr.length-1)] || [300,300,12]}
+function steelDims(){const x=steelEntry();return cfg.steelShape==='chs'?{x:x[0],y:x[0],t:x[1]}:cfg.steelShape==='h'?{x:x[1],y:x[0],tw:x[2],tf:x[3]}:{x:x[0],y:x[1],t:x[2]}}
+function steelName(){const a=steelEntry();return cfg.steelGrade+' '+(cfg.steelShape==='rhs'?'□-':cfg.steelShape==='chs'?'φ':'H-')+a.join('×')}
+function syncLevels(){
+ cfg.bxCZ=cfg.bxTopFL-cfg.bxH/2;cfg.byCZ=cfg.byTopFL-cfg.byH/2;
+ cfg.storyH=Math.max(100,cfg.pedTopFL,cfg.bxTopFL,cfg.byTopFL,cfg.upZ1,cfg.lowZ1)+900;
+ const dim=steelDims();cfg.steelX=dim.x;cfg.steelY=dim.y;
+}
+function updateCatalogUI(){
+ const grades=GRADES[cfg.steelShape]||GRADES.rhs;
+ if(!grades.includes(cfg.steelGrade)){cfg.steelGrade=grades[0];cfg.steelSpec=0}
+ const g=el('steelGrade');g.innerHTML=grades.map(v=>`<option value="${v}">${v}</option>`).join('');g.value=cfg.steelGrade;
+ const list=el('steelCatalog'),arr=steelArray(),q=(el('steelSearch')?.value||'').toLowerCase().replaceAll(' ','');
+ list.innerHTML=arr.map((v,i)=>({i,s:(cfg.steelShape==='rhs'?'□-':cfg.steelShape==='chs'?'φ':'H-')+v.join('×')})).filter(o=>o.s.toLowerCase().replaceAll(' ','').includes(q)).map(o=>`<option value="${o.i}">${o.s}</option>`).join('');
+ if(![...list.options].some(o=>Number(o.value)===cfg.steelSpec)&&list.options.length){cfg.steelSpec=Number(list.options[0].value)}
+ list.value=cfg.steelSpec;
+ el('steelDetail').innerHTML='選択：'+steelName()+' mm / 候補 '+arr.length+' サイズ。<strong>寸法候補リストです。鋼種ごとの製造可否・板厚組合せはメーカー表で要確認。</strong> <a href="https://www.jisf.or.jp/business/tech/build/qa/bcr01.html" target="_blank" rel="noopener" style="color:#77d6ff">BCR/BCP</a> ・ <a href="https://www.jisf.or.jp/sunpo/html/0201.html" target="_blank" rel="noopener" style="color:#77d6ff">ロールH</a>';
+}
+function num(v){return +v||0}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function deepCopy(v){return JSON.parse(JSON.stringify(v))}
+function saveJSON(){download(`JointClear_3D_v${APP_VERSION}_${Date.now()}.json`,JSON.stringify({appVersion:APP_VERSION,schemaVersion:MODEL_SCHEMA,cfg,adjust},null,2),'application/json')}
+function download(name,text,type='text/plain'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
+function dist2(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy)}
+function spaced(n,start,end){n=Math.max(0,Math.round(n));if(n<=0)return[];if(n===1)return[(start+end)/2];return Array.from({length:n},(_,i)=>start+(end-start)*i/(n-1))}
+function coverCol(){return 50}
+function coverBeam(){return 50}
+function currentModeNote(){return cfg.partMode==='foundation'?'基礎部：礎柱・基礎梁のかぶりは 50mm 固定。杭頭補強筋/杭主筋を考慮。':'一般部：柱・梁のかぶりは 40/50mm 選択。杭頭補強筋は対象外。RC柱では上下柱主筋と定着干渉を確認。'}
+function normalizeConfig(){
+ const label=k=>{const e=document.querySelector?.(`[data-k="${k}"]`),l=e?.closest('label');return l?.querySelector('span')?.textContent||l?.childNodes[0]?.textContent?.trim()||k};
+ const note=m=>{if(!inputWarnings.includes(m))inputWarnings.push(m)};
+ for(const [k,def] of Object.entries(DEFAULT))if(typeof def==='number'){
+   let n=Number(cfg[k]);if(!Number.isFinite(n)){n=def;note(`${label(k)}: 有限の数値ではないため初期値に戻しました`)}
+   const bounded=clamp(n,-100000,100000);if(bounded!==n)note(`${label(k)}: 入力範囲±100000に補正しました`);cfg[k]=bounded;
+ }
+ const counts=['pedNX','pedNY','lowNX','lowNY','upNX','upNY','pileN','ftN','bxNTop','bxNBot','byNTop','byNBot','anNX','anNY','cornerN'];
+ for(const k of counts){const n=clamp(Math.round(cfg[k]),k==='cornerN'?1:0,k==='cornerN'?4:k.startsWith('an')?16:64);if(n!==cfg[k])note(`${label(k)}: 本数を整数・上限内に補正しました`);cfg[k]=n}
+ for(const k of ['bxLayers','byLayers'])cfg[k]=clamp(Math.round(cfg[k]),1,3);
+ for(const k of ['pedX','pedY','lowerX','lowerY','upperX','upperY','colX','colY','bxW','byW','bxH','byH','pileD','bpX','bpY','pileConcreteDepth']){
+   const n=clamp(cfg[k],1,10000);if(n!==cfg[k])note(`${label(k)}: 寸法を1〜10000mmに補正しました`);cfg[k]=n;
+ }
+ for(const k of ['pedBar','pedHoopDia','lowBar','upBar','hoopDia','upHoopDia','pileBar','ftDia','anBar','bxBar','byBar','bxStirDia','byStirDia','bpT']){
+   const n=clamp(cfg[k],1,200);if(n!==cfg[k])note(`${label(k)}: 径・厚さを1〜200mmに補正しました`);cfg[k]=n;
+ }
+ for(const k of ['pileR','pileDev','ftLength','devLen','hookLen','anPX','anPY','cornerPX','cornerPY'])cfg[k]=Math.max(0,cfg[k]);
+ cfg.drawScale=clamp(cfg.drawScale,0.1,10);cfg.colCover=50;cfg.beamCover=50;cfg.baseType='exposed';
+ for(const [k,values] of Object.entries({partMode:['foundation','general'],columnType:['rc','steel'],pileType:['precast','castinplace'],pileJoint:['rebar','ft'],ftMode:['with','without'],steelShape:['rhs','chs','h'],footingSystem:['conventional','manufacturer'],hookDir:['inward','cw','ccw'],colJoint:['through','anchor']}))if(!values.includes(cfg[k]))cfg[k]=DEFAULT[k];
+ if(!(GRADES[cfg.steelShape]||[]).includes(cfg.steelGrade))cfg.steelGrade=GRADES[cfg.steelShape][0];
+ cfg.showUpperRC=cfg.showUpperRC===true;cfg.steelSpec=Math.max(0,Math.round(cfg.steelSpec));
+ for(const key of ['pedHoopPitch','hoopPitch','upHoopPitch','bxStirPitch','byStirPitch']){
+   const n=Number(cfg[key]);cfg[key]=[100,125,150,175,200].reduce((a,b)=>Math.abs(b-n)<Math.abs(a-n)?b:a,150);
+ }
+ if(cfg.bxOrder!=='first'&&cfg.bxOrder!=='second')cfg.bxOrder='first';cfg.byOrder=cfg.bxOrder==='first'?'second':'first';
+}
+function loadModel(o){
+ if(!o||typeof o!=='object'||!o.cfg||typeof o.cfg!=='object'||Array.isArray(o.cfg))throw new Error('cfgがありません');
+ inputWarnings=[];cfg={...DEFAULT};
+ for(const k of Object.keys(DEFAULT))if(Object.hasOwn(o.cfg,k))cfg[k]=o.cfg[k];
+ if(!Object.hasOwn(o.cfg,'colJoint'))cfg.colJoint='anchor'; // v1.9以前のJSON：上下柱とも定着（フック）として読込
+ adjust={};
+ if(o.adjust&&typeof o.adjust==='object')for(const [id,p] of Object.entries(o.adjust).slice(0,6000)){
+   if(!/^(ped|low|up|pile|an|bx|by)_[a-z0-9_]+$/.test(id)||!p||!Number.isFinite(Number(p.x))||!Number.isFinite(Number(p.y)))continue;
+   const parent=id.replace(/^(low|up)_hook_(\d+)$/,'$1_$2').replace(/^(pile_\d+)_hook$/,'$1');
+   if(id.includes('_tie_'))continue;
+   if(parent===id||!Object.hasOwn(o.adjust,parent))adjust[parent]={x:clamp(Number(p.x),-10000,10000),y:clamp(Number(p.y),-10000,10000)};
+ }
+ normalizeConfig();selected=null;
+}
+function showValidation(){
+ const e=el('validationStatus');if(!e)return;
+ e.classList.toggle('hidden',!modelWarnings.length);e.textContent=modelWarnings.length?'入力・納まり確認（干渉件数とは別）\n'+modelWarnings.join('\n'):'';
+}
+function updateUI(){
+ normalizeConfig();
+  for(const sel of document.querySelectorAll('.rebarSel'))if(!sel.options.length)sel.innerHTML=[10,13,16,19,22,25,29,32,35,38,41,51].map(n=>`<option value="${n}">D${n}</option>`).join('');
+  for(const sel of document.querySelectorAll('.stirSel'))if(!sel.options.length)sel.innerHTML=[100,125,150,175,200].map(n=>`<option value="${n}">${n}</option>`).join('');
+  for(const sel of document.querySelectorAll('.hoopSel'))if(!sel.options.length)sel.innerHTML=[100,125,150,175,200].map(n=>`<option value="${n}">${n}</option>`).join('');
+  syncLevels();updateCatalogUI();
+  fields.forEach(f=>{if(f.type==='checkbox')f.checked=!!cfg[f.dataset.k]; else f.value=cfg[f.dataset.k]});
+  el('modeNote').textContent='柱・梁のかぶりは一律50mm。柱脚は露出柱脚のみ。基礎部で上部RC柱筋を描画する場合は専用チェックをON。'+currentModeNote().replace(/かぶりは 40\/50mm 選択。/g,'かぶり50mm固定。');
+  el('elevationSummary').textContent=`礎柱高さ ${(cfg.pedTopFL-cfg.pedBottomFL).toFixed(0)} mm / 梁X天端 ${cfg.bxTopFL} / 梁Y天端 ${cfg.byTopFL}`;
+  el('bxCenterText').textContent=`FL ${cfg.bxCZ.toFixed(0)} mm`;el('byCenterText').textContent=`FL ${cfg.byCZ.toFixed(0)} mm`;
+  el('modelNote').textContent='主筋・フープ・スターラップを共通の線分モデルで表示・判定・CAD出力。帯筋との接触は許容し、重なりを判定します。モデル内に残る実際の干渉は引き続き警告します。帯筋は曲げ半径・端部フックを省略した直線近似です。メーカー柱脚は汎用配置です。';
+  el('ruleText').innerHTML=`・必要あき = 1.5 × (呼び径A + 呼び径B) / 2 mm<br>・部材の有効内法は、かぶり + フープ/スターラップ径 + 主筋半径を考慮して算定<br>・帯筋を含む組合せは表面の重なりを判定（必要あき0mm、同一鉄筋の構成線分は除外）<br>・かぶり・断面への納まりは別欄に警告<br>・一般部 RC柱：「通し」は上下主筋の端部同士の接続を除外、「定着」は端部フックと定着長（直線長）の警告。いずれも簡易モデル`;
+  const f=cfg.partMode==='foundation';
+  el('pileSec').classList.toggle('hidden',!f);
+
+  el('rcColSec').classList.toggle('hidden',cfg.columnType!=='rc'||f);
+  el('steelSec').classList.toggle('hidden',cfg.columnType!=='steel'); el('upperFoundationSec').classList.toggle('hidden',!(f&&cfg.columnType==='rc'));
+  const generalRC=cfg.partMode==='general' && cfg.columnType==='rc';
+  el('pedSec').classList.toggle('hidden',!f); el('ftModeWrap').classList.toggle('hidden',!(f&&cfg.pileJoint==='ft'&&cfg.pileType==='precast')); ['ftCountWrap','ftDiaWrap','ftLengthWrap','ftAngleWrap'].forEach(id=>el(id).classList.toggle('hidden',!(f&&cfg.pileJoint==='ft'&&cfg.pileType==='precast'&&cfg.ftMode==='with'))); ['cornerSettings','cornerNWrap','cornerPXWrap','cornerPYWrap'].forEach(id=>el(id).classList.toggle('hidden',cfg.footingSystem!=='manufacturer'));
+
+  const ft=f&&cfg.pileType==='precast'&&cfg.pileJoint==='ft';
+  for(const k of ['pileZ0','pileZ1','pileN','pileBar','pileAngle'])document.querySelector(`[data-k="${k}"]`).closest('label').classList.toggle('hidden',ft);
+  el('pileHookWrap').classList.toggle('hidden',ft||cfg.pileType!=='castinplace');
+  const beamBottom=Math.min(cfg.bxCZ-cfg.bxH/2,cfg.byCZ-cfg.byH/2);
+  el('sliceZ').min=Math.floor((Math.min(-800,beamBottom,...(f?[cfg.pileZ0,cfg.pedBottomFL,cfg.pileHeadFL-cfg.pileConcreteDepth,cfg.anZ0]:[cfg.lowZ0,beamBottom-900]))-100)/10)*10;
+  el('sliceZ').max=Math.ceil((Math.max(2200,cfg.storyH,cfg.lowZ1,cfg.upZ1,cfg.anZ1,cfg.pileZ1)+100)/10)*10;
+  const anchorMode=cfg.colJoint==='anchor';['devLenWrap','hookLenWrap','hookDirWrap'].forEach(id=>el(id).classList.toggle('hidden',!anchorMode));
+  el('colJointNote').textContent=anchorMode?'定着：下部柱は上端、上部柱は下端にフック。接合部面（梁下端の高い方／梁天端の低い方）から端部までの直線長が定着長未満なら警告します。':'通し：下部柱上端と上部柱下端が同じ位置で接続する主筋は、端部同士を干渉から除外します。継手位置・継手長さは判定対象外。断面変化などで主筋位置が合わない場合は「定着」を選択してください。';
+  const maker=cfg.footingSystem==='manufacturer';el('anPXLabel').textContent=maker?'コーナー集約中心 X距離 ±(mm)':'アンカー Xピッチ(mm)';el('anPYLabel').textContent=maker?'コーナー集約中心 Y距離 ±(mm)':'アンカー Yピッチ(mm)';
+  el('sliceLabel').textContent=`Z = ${el('sliceZ').value} mm`;
+}
+function ensureCanvas(){const r=canvas.parentElement.getBoundingClientRect();const dpr=window.devicePixelRatio||1;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+function basePos(id){return adjust[id]||{x:0,y:0}}
+function moveId(id){return items.find(x=>x.id===id)?.parentId||id}
+function setPos(id,x,y){adjust[moveId(id)]={x:clamp(num(x),-10000,10000),y:clamp(num(y),-10000,10000)}}
+function clearFamily(prefix){for(const k of Object.keys(adjust))if(k.startsWith(prefix))delete adjust[k]}
+
+function addItem(arr,o){o.pickX=o.a.x;o.pickY=o.a.y;arr.push(o)}
+function addSeg(arr,id,name,family,color,d,a,b,meta={}){
+ if(![d,a.x,a.y,a.z,b.x,b.y,b.z].every(Number.isFinite)||d<=0){modelWarn('非有限座標または不正な径の鉄筋を除外: '+id);return}
+ if(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<1e-6)return;
+ if(arr.length>=6000){modelWarn('モデル上限6000線分を超えています。入力を減らしてください。');return}
+ addItem(arr,{id,parentId:meta.parentId||id,name,family,color,d,a,b,meta:{owner:id.split('_')[0],...meta}})
+}
+function colBars(prefix,nx,ny,bar,z0,z1,color){
+  const dimX=prefix==='ped'?cfg.pedX:prefix==='up'?cfg.upperX:cfg.lowerX;
+  const dimY=prefix==='ped'?cfg.pedY:prefix==='up'?cfg.upperY:cfg.lowerY;
+  const hoop=prefix==='ped'?cfg.pedHoopDia:prefix==='up'?cfg.upHoopDia:cfg.hoopDia;
+  const cvr=coverCol()+hoop+bar/2;
+  if(z1<=z0){rejectedCols.add(prefix);modelWarn(prefix+': 上端FLは下端FLより大きくしてください。主筋・フープを生成していません。');return []}
+  if(Math.min(dimX,dimY)<2*cvr){rejectedCols.add(prefix);modelWarn(prefix+': かぶり・フープ・主筋径に対して柱断面が不足しています。主筋・フープを生成していません。');return []}
+  if(!nx||!ny){modelWarn(prefix+': 主筋本数が0のため主筋を生成していません（フープのみ表示）。');return []}
+  const xs=spaced(nx,-dimX/2+cvr,dimX/2-cvr), ys=spaced(ny,-dimY/2+cvr,dimY/2-cvr);
+  const bars=[]; let index=0;
+  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){
+    if(i!==0&&i!==nx-1&&j!==0&&j!==ny-1)continue;
+    const id=`${prefix}_${index++}`; const off=basePos(id);
+    addSeg(bars,id,`${prefix==='ped'?'礎柱':prefix==='low'?'下部柱':'上部柱'}主筋${index}`,'rc',color,bar,{x:xs[i]+off.x,y:ys[j]+off.y,z:z0},{x:xs[i]+off.x,y:ys[j]+off.y,z:z1},{kind:'vert'});
+  }
+  return bars
+}
+function anchorBars(){
+ const arr=[];let k=0;
+ if(cfg.anZ1<=cfg.anZ0){modelWarn('アンカー: 上端FLは下端FLより大きくしてください。');return arr}
+ const positions=[];
+ if(cfg.footingSystem==='manufacturer'){
+   const cx=Math.max(0,cfg.anPX),cy=Math.max(0,cfg.anPY),count=clamp(Math.round(cfg.cornerN||1),1,4);
+   const dx=Math.max(0,cfg.cornerPX||0),dy=Math.max(0,cfg.cornerPY||0);
+   const local=count===1?[[0,0]]:count===2?[[-dx/2,0],[dx/2,0]]:count===3?[[-dx/2,-dy/2],[dx/2,-dy/2],[0,dy/2]]:[[-dx/2,-dy/2],[-dx/2,dy/2],[dx/2,-dy/2],[dx/2,dy/2]];
+   // v2.0: 3本配置はコーナーごとに鏡像（3本目は全コーナーでY方向外側）。1・2・4本はID順を含め従来どおり。
+   for(const sx of [-1,1])for(const sy of [-1,1])for(const [x,y] of local)positions.push(count===3?[sx*(cx+x),sy*(cy+y)]:[sx*cx+x,sy*cy+y]);
+ }else{
+   const xs=spaced(cfg.anNX,-cfg.anPX*(cfg.anNX-1)/2,cfg.anPX*(cfg.anNX-1)/2),ys=spaced(cfg.anNY,-cfg.anPY*(cfg.anNY-1)/2,cfg.anPY*(cfg.anNY-1)/2);
+   for(const x of xs)for(const y of ys)positions.push([x,y]);
+ }
+ for(const [x,y] of positions){const id=`an_${k++}`,off=basePos(id);addSeg(arr,id,`アンカー${k}`,'anchor',colors.anchor,cfg.anBar,{x:x+off.x,y:y+off.y,z:cfg.anZ0},{x:x+off.x,y:y+off.y,z:cfg.anZ1},{kind:'vert'})}
+ return arr;
+}
+function pileBars(){
+ if(cfg.partMode!=='foundation')return[];
+ const arr=[],ft=cfg.pileJoint==='ft'&&cfg.pileType==='precast';if(cfg.pileJoint==='ft'&&cfg.pileType!=='precast')modelWarn('杭: F.T.Pileは既製杭のみ対応です。場所打ち杭では杭主筋として生成しています。');if(ft&&cfg.ftMode==='without')return arr;
+ const n=ft?cfg.ftN:cfg.pileN,ang0=(ft?cfg.ftAngle:cfg.pileAngle)*Math.PI/180;
+ const z0=ft?cfg.pileHeadFL:cfg.pileZ0,z1=ft?cfg.pileHeadFL+cfg.ftLength:cfg.pileZ1;
+ if(z1<=z0){modelWarn('杭筋: 直線部上端は下端より大きくしてください。配筋を生成していません。');return arr}
+ if(!ft&&(z0>cfg.pileHeadFL||z1<cfg.pileHeadFL))modelWarn('杭筋の直線部が杭頭FLをまたいでいません。上下端FLを確認してください。');
+ for(let i=0;i<n;i++){
+  const t=ang0+Math.PI*2*i/Math.max(1,n),id=`pile_${i}`,off=basePos(id),bar=ft?cfg.ftDia:cfg.pileBar;
+  const x=cfg.pileX+cfg.pileR*Math.cos(t)+off.x,y=cfg.pileY+cfg.pileR*Math.sin(t)+off.y;
+  addSeg(arr,id,`${ft?'F.T.Pile引抜き鋼棒':cfg.pileType==='precast'?'杭頭補強筋':'杭主筋'}${i+1}`,'pile',colors.pile,bar,{x,y,z:z0},{x,y,z:z1},{kind:'vert'});
+  if(!ft&&cfg.pileType==='castinplace'&&cfg.pileDev>0){
+   const dx=cfg.pileX-x,dy=cfg.pileY-y,len=Math.hypot(dx,dy),ux=len>1e-9?dx/len:-Math.cos(t),uy=len>1e-9?dy/len:-Math.sin(t);
+   addSeg(arr,`${id}_hook`,`杭主筋定着${i+1}`,'pile',colors.pile,bar,{x,y,z:z1},{x:x+ux*cfg.pileDev,y:y+uy*cfg.pileDev,z:z1},{kind:'hook',parentId:id})
+  }
+ }
+ return arr;
+}
+function beamHalfSpan(){return Math.max(cfg.partMode==='foundation'?cfg.pedX:cfg.lowerX,cfg.partMode==='foundation'?cfg.pedY:cfg.lowerY,cfg.columnType==='steel'?cfg.steelX:0,cfg.upperX,cfg.upperY)*1.2+Math.max(cfg.bxW,cfg.byW,1200)}
+function beamLayerLevels(){
+ const level={};
+ for(const p of ['bx','by']){const c=coverBeam()+cfg[p+'StirDia']+cfg[p+'Bar']/2;level[p]={top:cfg[p+'CZ']+cfg[p+'H']/2-c,bot:cfg[p+'CZ']-cfg[p+'H']/2+c}}
+ const first=cfg.bxOrder==='first'?'bx':'by',second=first==='bx'?'by':'bx',req=2.5*(cfg[first+'Bar']+cfg[second+'Bar'])/2;
+ // Preserve the original ordering: second direction upper bundle above first;
+ // first direction lower bundle below second. Account for every layer.
+ // v1.9: adjust only when the two bundles actually meet (centre gap < req).
+ // Bundles separated by beam-top or depth differences are left at their own levels.
+ const depth=p=>(cfg[p+'Layers']-1)*2.5*cfg[p+'Bar'];
+ const meet=(a0,a1,b0,b1)=>!(a0>=b1+req-1e-6||b0>=a1+req-1e-6);
+ if(cfg[first+'NTop']>0&&cfg[second+'NTop']>0){
+  const f=level[first].top,s=level[second].top;
+  if(meet(f-depth(first),f,s-depth(second),s))level[first].top=Math.min(f,s-depth(second)-req);
+ }
+ if(cfg[first+'NBot']>0&&cfg[second+'NBot']>0){
+  const f=level[first].bot,s=level[second].bot;
+  if(meet(f,f+depth(first),s,s+depth(second)))level[second].bot=Math.max(s,f+depth(first)+req);
+ }
+ return level;
+}
+function beamBars(axis){
+  const isX=axis==='x';
+  const p=isX?'bx':'by', fam=p, color=isX?colors.bx:colors.by;
+  const w=cfg[p+'W'], h=cfg[p+'H'], bar=cfg[p+'Bar'];
+  const layers=clamp(Math.round(cfg[p+'Layers']),1,3);
+  const pitch=2.5*bar;
+  const cvr=coverBeam()+cfg[p+'StirDia']+bar/2;
+  const zc=cfg[p+'CZ'];
+  const off=isX?cfg.bxOff:cfg.byOff;
+  const nTop=Math.round(cfg[p+'NTop']), nBot=Math.round(cfg[p+'NBot']);
+  const span=beamHalfSpan();
+  const start=isX?{x:-span,y:off,z:zc}:{x:off,y:-span,z:zc};
+  const end=isX?{x:span,y:off,z:zc}:{x:off,y:span,z:zc};
+  const minP=-w/2+cvr, maxP=w/2-cvr;
+  const posTop=spaced(nTop,minP,maxP), posBot=spaced(nBot,minP,maxP);
+
+  const levels=beamLayerLevels()[p],topFirst=levels.top,botFirst=levels.bot;
+  if(minP>maxP){modelWarn(p+': かぶり・スターラップ・主筋径に対して梁幅が不足しています。配筋を生成していません。');return []}
+  const arr=[];
+  function addLayerSet(side,positions,count){
+    for(let layer=0; layer<layers; layer++){
+      const z = side==='top' ? (topFirst - layer*pitch) : (botFirst + layer*pitch);
+      positions.forEach((pp,i)=>{
+        const id=`${p}_${side}_${layer}_${i}`;
+        const offxy=basePos(id);
+        const a={...start}, b={...end};
+        if(isX){
+          a.y=off+pp+offxy.y; b.y=off+pp+offxy.y; a.x+=offxy.x; b.x+=offxy.x;
+        } else {
+          a.x=off+pp+offxy.x; b.x=off+pp+offxy.x; a.y+=offxy.y; b.y+=offxy.y;
+        }
+        a.z=z; b.z=z;
+        addSeg(arr,id,`${isX?'X':'Y'}梁${side==='top'?'上':'下'}端筋 L${layer+1}-${i+1}`,fam,color,bar,a,b,{kind:'beam',axis,side,layer});
+      });
+    }
+  }
+  addLayerSet('top',posTop,nTop);
+  addLayerSet('bot',posBot,nBot);
+  return arr;
+}
+// v2.0: hooks sit at the bar end (lower column: top end, upper column: bottom end).
+// Direction is taken from the face the bar sits on: inward = perpendicular to that face (corner bars: diagonal);
+// cw/ccw = along the face, toward the inside of the section (corner bars: the face that keeps the hook inside).
+function hookDirection(x,y,W,H){
+  const ex=W/2-Math.abs(x),ey=H/2-Math.abs(y),sx=Math.sign(x),sy=Math.sign(y),corner=Math.abs(ex-ey)<1&&sx!==0&&sy!==0;
+  let n=corner?{x:sx,y:sy}:ex<ey?{x:sx||1,y:0}:{x:0,y:sy||1};
+  if(cfg.hookDir==='inward'){const L=Math.hypot(n.x,n.y);return {x:-n.x/L,y:-n.y/L}}
+  const t=cfg.hookDir==='cw'?{x:n.y,y:-n.x}:{x:-n.y,y:n.x};
+  if(!corner)return t;
+  return Math.sign(t.x)===-sx?{x:t.x,y:0}:{x:0,y:t.y};
+}
+function jointFaces(){return {bottom:Math.max(cfg.bxCZ-cfg.bxH/2,cfg.byCZ-cfg.byH/2),top:Math.min(cfg.bxCZ+cfg.bxH/2,cfg.byCZ+cfg.byH/2)}}
+function devHooks(){
+  const arr=[]; if(!(cfg.partMode==='general' && cfg.columnType==='rc' && cfg.colJoint==='anchor'))return arr;
+  const low=items.filter(it=>/^low_\d+$/.test(it.id)),up=items.filter(it=>/^up_\d+$/.test(it.id)),jf=jointFaces();
+  low.forEach((b,i)=>{const d=hookDirection(b.b.x,b.b.y,cfg.lowerX,cfg.lowerY);addSeg(arr,`low_hook_${i}`,`下部柱定着${i+1}`,'rc',colors.rc,cfg.lowBar,{...b.b},{x:b.b.x+d.x*cfg.hookLen,y:b.b.y+d.y*cfg.hookLen,z:b.b.z},{kind:'hook',parentId:b.id})});
+  up.forEach((b,i)=>{const d=hookDirection(b.a.x,b.a.y,cfg.upperX,cfg.upperY);addSeg(arr,`up_hook_${i}`,`上部柱定着${i+1}`,'rc',colors.rc,cfg.upBar,{...b.a},{x:b.a.x+d.x*cfg.hookLen,y:b.a.y+d.y*cfg.hookLen,z:b.a.z},{kind:'hook',parentId:b.id})});
+  if(low.length&&cfg.lowZ1-jf.bottom<cfg.devLen-1e-6)modelWarn(`下部柱: 接合部下面（梁下端の高い方 FL${jf.bottom.toFixed(0)}）から主筋上端までの直線長 ${(cfg.lowZ1-jf.bottom).toFixed(0)}mm が定着長 ${cfg.devLen}mm 未満です。`);
+  if(up.length&&jf.top-cfg.upZ0<cfg.devLen-1e-6)modelWarn(`上部柱: 接合部上面（梁天端の低い方 FL${jf.top.toFixed(0)}）から主筋下端までの直線長 ${(jf.top-cfg.upZ0).toFixed(0)}mm が定着長 ${cfg.devLen}mm 未満です。`);
+  return arr
+}
+// Through mode: a lower bar whose top end coincides with an upper bar's bottom end is one continuous bar.
+function throughJoint(a,b){
+  if(cfg.partMode!=='general'||cfg.columnType!=='rc'||cfg.colJoint!=='through'||a.meta.kind!=='vert'||b.meta.kind!=='vert')return false;
+  const low=a.meta.owner==='low'?a:b.meta.owner==='low'?b:null,up=a.meta.owner==='up'?a:b.meta.owner==='up'?b:null;
+  return !!(low&&up&&Math.abs(low.b.z-up.a.z)<1e-6&&Math.hypot(low.b.x-up.a.x,low.b.y-up.a.y)<1e-6);
+}
+function checkThrough(){
+  if(!(cfg.partMode==='general'&&cfg.columnType==='rc'&&cfg.colJoint==='through'))return;
+  const low=items.filter(it=>/^low_\d+$/.test(it.id)),up=items.filter(it=>/^up_\d+$/.test(it.id));
+  if(!low.length||!up.length)return;
+  const linked=b=>up.some(u=>throughJoint(b,u));
+  const n=low.filter(b=>!linked(b)).length+up.filter(u=>!low.some(b=>throughJoint(b,u))).length;
+  if(n)modelWarn(`通し筋: 下部柱上端と上部柱下端で位置が一致しない主筋が ${n} 本あります（レベル・断面・本数・調整量を確認。断面変化部は「定着」を選択）。`);
+}
+function tieBars(){
+ const arr=[];
+ const loop=(parent,name,owner,points,d)=>{for(let j=0;j<4;j++)addSeg(arr,`${parent}_${j}`,`${name} 辺${j+1}`,'tie',colors.tie,d,points[j],points[(j+1)%4],{kind:'tie',owner,parentId:parent})};
+ const columns=cfg.partMode==='foundation'?[['ped',cfg.pedBottomFL,cfg.pedTopFL,cfg.pedX,cfg.pedY,cfg.pedHoopDia,cfg.pedHoopPitch]]:[];
+ if(cfg.columnType==='rc'){
+  if(cfg.partMode==='general')columns.push(['low',cfg.lowZ0,cfg.lowZ1,cfg.lowerX,cfg.lowerY,cfg.hoopDia,cfg.hoopPitch]);
+  if(cfg.partMode==='general'||cfg.showUpperRC)columns.push(['up',cfg.upZ0,cfg.upZ1,cfg.upperX,cfg.upperY,cfg.upHoopDia,cfg.upHoopPitch]);
+ }
+ for(const [owner,z0,z1,w,h,d,pitch] of columns){
+  if(rejectedCols.has(owner))continue;
+  const x=w/2-coverCol()-d/2,y=h/2-coverCol()-d/2;if(x<=0||y<=0||z1<=z0)continue;
+  let i=0;for(let z=z0+pitch/2;z<=z1-d/2+1e-6;z+=pitch){const id=`${owner}_tie_${i++}`;loop(id,`${owner==='ped'?'礎柱':owner==='up'?'上部柱':'下部柱'}フープ${i}`,owner,[{x:-x,y:-y,z},{x,y:-y,z},{x,y,z},{x:-x,y,z}],d)}
+ }
+ const span=beamHalfSpan();
+ for(const owner of ['bx','by']){
+  const d=cfg[owner+'StirDia'],pitch=cfg[owner+'StirPitch'],hw=cfg[owner+'W']/2-coverBeam()-d/2,hh=cfg[owner+'H']/2-coverBeam()-d/2,zc=cfg[owner+'CZ'],off=cfg[owner+'Off'];
+  if(hw<=0||hh<=0){modelWarn(owner+': スターラップを納める断面がありません。');continue}
+  let i=0;for(let u=-span+pitch/2;u<=span-d/2;u+=pitch){
+   const id=`${owner}_tie_${i++}`,points=owner==='bx'?[{x:u,y:off-hw,z:zc-hh},{x:u,y:off+hw,z:zc-hh},{x:u,y:off+hw,z:zc+hh},{x:u,y:off-hw,z:zc+hh}]:[{x:off-hw,y:u,z:zc-hh},{x:off+hw,y:u,z:zc-hh},{x:off+hw,y:u,z:zc+hh},{x:off-hw,y:u,z:zc+hh}];
+   loop(id,`${owner==='bx'?'X':'Y'}梁スターラップ${i}`,owner,points,d);
+  }
+ }
+ return arr;
+}
+function checkModelFit(){
+ for(const p of ['bx','by']){
+  const bars=items.filter(x=>x.family===p),c=coverBeam()+cfg[p+'StirDia'];
+  const side=cfg[p+'W']/2-c,lo=cfg[p+'CZ']-cfg[p+'H']/2+c,hi=cfg[p+'CZ']+cfg[p+'H']/2-c;
+  if(bars.some(b=>{const u=p==='bx'?b.a.y:b.a.x;return Math.abs(u-cfg[p+'Off'])+b.d/2>side+1e-6||b.a.z-b.d/2<lo-1e-6||b.a.z+b.d/2>hi+1e-6}))modelWarn(`${p==='bx'?'X':'Y'}梁: 主筋がかぶり・スターラップ内に納まりません。断面・段数・レベル・調整量を確認してください。`);
+  const top=bars.filter(x=>x.meta.side==='top'),bot=bars.filter(x=>x.meta.side==='bot');
+  if(top.length&&bot.length&&Math.min(...top.map(b=>b.a.z))-Math.max(...bot.map(b=>b.a.z))<2.5*cfg[p+'Bar']-1e-6)modelWarn(`${p==='bx'?'X':'Y'}梁: 上端筋と下端筋の段が接近・逆転しています。梁せいを確認してください。`);
+ }
+ for(const p of ['ped','low','up']){
+  const w=p==='ped'?cfg.pedX:p==='low'?cfg.lowerX:cfg.upperX,h=p==='ped'?cfg.pedY:p==='low'?cfg.lowerY:cfg.upperY,d=p==='ped'?cfg.pedHoopDia:p==='low'?cfg.hoopDia:cfg.upHoopDia;
+  if(items.some(b=>b.meta.owner===p&&b.meta.kind==='vert'&&(Math.abs(b.a.x)+b.d/2>w/2-coverCol()-d+1e-6||Math.abs(b.a.y)+b.d/2>h/2-coverCol()-d+1e-6)))modelWarn(`${p==='ped'?'礎柱':p==='up'?'上部柱':'下部柱'}: 主筋がフープ内に納まりません。寸法・調整量を確認してください。`);
+ }
+}
+function generate(){
+  normalizeConfig();syncLevels();modelWarnings=[...inputWarnings];rejectedCols=new Set();
+  let arr=[];
+  if(cfg.partMode==='foundation') arr.push(...pileBars());
+  if(cfg.partMode==='foundation'){
+    // 礎柱は上部柱のRC/S区分とは独立したRC部材
+    arr.push(...colBars('ped',cfg.pedNX,cfg.pedNY,cfg.pedBar,cfg.pedBottomFL,cfg.pedTopFL,colors.rc));
+    if(cfg.columnType==='rc'&&cfg.showUpperRC)arr.push(...colBars('up',cfg.upNX,cfg.upNY,cfg.upBar,cfg.upZ0,cfg.upZ1,colors.rc));
+    if(cfg.columnType==='steel')arr.push(...anchorBars());
+  }else if(cfg.columnType==='rc'){
+    arr.push(...colBars('low',cfg.lowNX,cfg.lowNY,cfg.lowBar,cfg.lowZ0,cfg.lowZ1,colors.rc));
+    arr.push(...colBars('up',cfg.upNX,cfg.upNY,cfg.upBar,cfg.upZ0,cfg.upZ1,colors.rc));
+  }
+  arr.push(...beamBars('x')); arr.push(...beamBars('y'));
+  items=arr; if(cfg.partMode==='general'&&cfg.columnType==='rc') items.push(...devHooks());
+  items.push(...tieBars());checkModelFit();checkThrough();showValidation();
+  calcIssues(); if(selected&&!items.some(x=>x.id===selected))refreshSelection(); if(window.JC3D) window.JC3D.schedule();
+}
+function segDist3(A,B,C,D){
+  // from geomalgorithms.com (compact)
+  const ux=B.x-A.x, uy=B.y-A.y, uz=B.z-A.z, vx=D.x-C.x, vy=D.y-C.y, vz=D.z-C.z, wx=A.x-C.x, wy=A.y-C.y, wz=A.z-C.z;
+  const a=ux*ux+uy*uy+uz*uz, b=ux*vx+uy*vy+uz*vz, c=vx*vx+vy*vy+vz*vz, d=ux*wx+uy*wy+uz*wz, e=vx*wx+vy*wy+vz*wz, EPS=1e-9;
+  if(a<EPS&&c<EPS)return Math.hypot(wx,wy,wz);
+  if(a<EPS){const t=clamp(e/c,0,1);return Math.hypot(wx-t*vx,wy-t*vy,wz-t*vz)}
+  if(c<EPS){const t=clamp(-d/a,0,1);return Math.hypot(wx+t*ux,wy+t*uy,wz+t*uz)}
+  let sN,sD=a*c-b*b,tN,tD=sD;
+  if(sD<EPS){sN=0;sD=1;tN=e;tD=c}else{ sN=(b*e-c*d); tN=(a*e-b*d); if(sN<0){sN=0; tN=e; tD=c} else if(sN>sD){sN=sD; tN=e+b; tD=c} }
+  if(tN<0){tN=0; if(-d<0)sN=0; else if(-d>a)sN=sD; else {sN=-d; sD=a}}
+  else if(tN>tD){tN=tD; if((-d+b)<0)sN=0; else if((-d+b)>a)sN=sD; else {sN=(-d+b); sD=a}}
+  const sc=Math.abs(sN)<EPS?0:sN/sD, tc=Math.abs(tN)<EPS?0:tN/tD;
+  const dx=wx+sc*ux-tc*vx, dy=wy+sc*uy-tc*vy, dz=wz+sc*uz-tc*vz;
+  return Math.hypot(dx,dy,dz)
+}
+function calcIssues(){
+ issues=[];issueSet.clear();
+ const active=items.map(it=>({it,minX:Math.min(it.a.x,it.b.x)-it.d/2,maxX:Math.max(it.a.x,it.b.x)+it.d/2,minY:Math.min(it.a.y,it.b.y)-it.d/2,maxY:Math.max(it.a.y,it.b.y)+it.d/2,minZ:Math.min(it.a.z,it.b.z)-it.d/2,maxZ:Math.max(it.a.z,it.b.z)+it.d/2})).sort((a,b)=>a.minX-b.minX);
+ const maxReq=1.5*Math.max(0,...items.map(x=>x.d));
+ for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
+  const A=active[i],B=active[j],a=A.it,b=B.it;if(B.minX>A.maxX+maxReq)break;
+  if(a.parentId===b.parentId)continue;
+  const tie=a.family==='tie'||b.family==='tie',req=tie?0:1.5*(a.d+b.d)/2;
+  if(B.minX>A.maxX+req||A.minY>B.maxY+req||B.minY>A.maxY+req||A.minZ>B.maxZ+req||B.minZ>A.maxZ+req)continue;
+  if(cfg.partMode==='foundation'&&((a.meta.owner==='ped'&&b.meta.owner==='up')||(a.meta.owner==='up'&&b.meta.owner==='ped'))&&a.meta.kind==='vert'&&b.meta.kind==='vert'){
+   const ped=a.meta.owner==='ped'?a:b,up=a.meta.owner==='up'?a:b;
+   if(Math.abs(ped.b.z-up.a.z)<1e-6&&Math.hypot(ped.b.x-up.a.x,ped.b.y-up.a.y)<1e-6)continue;
+  }
+  if(throughJoint(a,b))continue;
+  const clear=segDist3(a.a,a.b,b.a,b.b)-(a.d+b.d)/2;
+  if(clear<req-1e-6){issues.push({a,b,clear,req,short:req-clear});issueSet.add(a.id);issueSet.add(b.id)}
+ }
+ el('issueCount').textContent=issues.length;renderIssues();
+}
+function renderIssues(){
+  const box=el('issues'); box.innerHTML='';
+  if(!issues.length){box.innerHTML='<div class="small good">鉄筋間の干渉・あき不足なし（入力・納まり確認は別欄）</div>'; return}
+  if(issues.length>200){const n=document.createElement('div');n.className='small';n.textContent='先頭200組を表示。全'+issues.length+'組はCSVに出力できます。';box.appendChild(n)}
+  issues.sort((p,q)=>p.clear-q.clear).slice(0,200).forEach((it,idx)=>{
+    const d=document.createElement('div'); d.className='row'; d.innerHTML=`<strong>${idx+1}. ${it.a.name}</strong><br><small>${it.b.name}<br>表面間あき ${it.clear.toFixed(1)} mm / 必要 ${it.req.toFixed(1)} mm / 不足 ${it.short.toFixed(1)} mm</small>`;
+    d.onclick=()=>{selected=it.a.id; refreshSelection(); draw();}; box.appendChild(d)
+  })
+}
+function currentFootprint(){return cfg.partMode==='foundation'?{x:cfg.pedX,y:cfg.pedY}:cfg.columnType==='rc'?{x:cfg.lowerX,y:cfg.lowerY}:steelDims()}
+function outlineConcretePlan(){
+ const z=num(el('sliceZ').value);
+ for(const o of cadShapes()){
+  const b=shapeBounds(o);ctx.save();ctx.strokeStyle=o.family==='steel'?'#91acc5':o.id==='PILE_CONCRETE'?'#4fa9cc':'#55728e';ctx.lineWidth=1.5;ctx.globalAlpha=z>=b[2]&&z<=b[5]?1:.3;
+  if(o.shape==='box'){const a=world2plan(b[0],b[4]),c=world2plan(b[3],b[1]);ctx.strokeRect(a.x,a.y,c.x-a.x,c.y-a.y)}
+  else{const c=world2plan(o.a.x,o.a.y);ctx.beginPath();ctx.arc(c.x,c.y,mm2px(o.d/2),0,2*Math.PI);ctx.stroke();if(o.shape==='tube'){ctx.beginPath();ctx.arc(c.x,c.y,mm2px(o.d/2-o.t),0,2*Math.PI);ctx.stroke()}}
+  ctx.restore();
+ }
+}
+function world2plan(x,y){ return {x:canvas.clientWidth/2 + (x+pan.x)*mm2px(1), y:canvas.clientHeight/2 - (y+pan.y)*mm2px(1)} }
+function mm2px(mm){const base=Math.min(canvas.clientWidth,canvas.clientHeight)/(Math.max(currentFootprint().x,currentFootprint().y,cfg.pileD,cfg.bxW,cfg.byW)*1.9); return mm*base*cfg.drawScale*zoom}
+function nearSlice(it){const z=num(el('sliceZ').value); const z0=Math.min(it.a.z,it.b.z), z1=Math.max(it.a.z,it.b.z); return z>=z0-20 && z<=z1+20}
+function drawPlan(){
+  outlineConcretePlan();
+  const grouped={}; items.forEach(it=>{grouped[it.id]=it});
+  items.forEach(it=>{
+    const A=world2plan(it.a.x,it.a.y), B=world2plan(it.b.x,it.b.y), selectedNow=selected===it.id, issue=issueSet.has(it.id), alpha=nearSlice(it)?1:.38;
+    ctx.save(); ctx.lineWidth=Math.max(1.5,mm2px(it.d)); ctx.lineCap='round'; ctx.strokeStyle=issue?colors.alert:it.color; ctx.globalAlpha=alpha; ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke();
+    if(Math.hypot(A.x-B.x,A.y-B.y)<4){ ctx.beginPath(); ctx.arc(A.x,A.y,Math.max(3,mm2px(it.d)/2),0,Math.PI*2); ctx.fillStyle=issue?colors.alert:it.color; ctx.fill() }
+    if(selectedNow){ ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(A.x,A.y,Math.max(8,mm2px(it.d)/2+5),0,Math.PI*2); ctx.stroke(); }
+    ctx.restore();
+  })
+}
+function drawSection(){
+ const W=canvas.clientWidth,H=canvas.clientHeight,axis=el('secAxis').value,normal=v=>axis==='x'?v.x:v.y,u=v=>axis==='x'?v.y:v.x;
+ const relevant=items.filter(it=>{const a=normal(it.a),b=normal(it.b);return Math.min(a,b)<=it.d/2&&Math.max(a,b)>=-it.d/2});
+ const shapes=cadShapes().filter(o=>{const b=shapeBounds(o);return b[axis==='x'?0:1]<=0&&b[axis==='x'?3:4]>=0});
+ let u0=-500,u1=500,z0=-500,z1=1000;
+ const ext=(a,b,c,d)=>{u0=Math.min(u0,a,b);u1=Math.max(u1,a,b);z0=Math.min(z0,c,d);z1=Math.max(z1,c,d)};
+ for(const o of shapes){const b=shapeBounds(o);ext(b[axis==='x'?1:0],b[axis==='x'?4:3],b[2],b[5])}
+ for(const it of relevant)ext(u(it.a),u(it.b),it.a.z,it.b.z);
+ const fit=Math.min((W-100)/(u1-u0),(H-70)/(z1-z0)),scale=fit*zoom,cx=W/2+secPan.x,cy=H/2+secPan.y,uc=(u0+u1)/2,zc=(z0+z1)/2,p=(v,z)=>({x:cx+(v-uc)*scale,y:cy-(z-zc)*scale});
+ const rect=(a,b,c,d)=>{const A=p(a,d),B=p(b,c);ctx.strokeRect(A.x,A.y,B.x-A.x,B.y-A.y)};
+ ctx.save();ctx.lineWidth=1.5;
+ for(const o of shapes){const b=shapeBounds(o);ctx.strokeStyle=o.family==='steel'?'#91acc5':'#55728e';
+  if(o.shape==='box')rect(b[axis==='x'?1:0],b[axis==='x'?4:3],b[2],b[5]);
+  else{const c=normal(o.a),r=o.d/2,w=Math.sqrt(Math.max(0,r*r-c*c)),v=u(o.a);rect(v-w,v+w,b[2],b[5]);if(o.shape==='tube'&&Math.abs(c)<r-o.t){const wi=Math.sqrt((r-o.t)**2-c*c);rect(v-wi,v+wi,b[2],b[5])}}
+ }
+ for(const it of relevant){
+  const a=normal(it.a),b=normal(it.b),sel=selected===it.id,issue=issueSet.has(it.id);ctx.strokeStyle=issue?colors.alert:it.color;ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=Math.max(1,it.d*scale);ctx.lineCap='round';
+  if(Math.abs(a)<=it.d/2&&Math.abs(b)<=it.d/2){const A=p(u(it.a),it.a.z),B=p(u(it.b),it.b.z);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
+  else if(a*b<=0){const t=clamp(-a/((b-a)||1),0,1),A=p(u(it.a)+(u(it.b)-u(it.a))*t,it.a.z+(it.b.z-it.a.z)*t);ctx.beginPath();ctx.arc(A.x,A.y,Math.max(1,it.d*scale/2),0,2*Math.PI);ctx.fill()}
+  if(sel){const A=p(u(it.a),it.a.z);ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(A.x,A.y,6,0,2*Math.PI);ctx.stroke()}
+ }
+ const A=p(u0,0),B=p(u1,0);ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.font='12px sans-serif';ctx.fillStyle='#cfd8e3';ctx.fillText('FL ±0',A.x+4,A.y-5);ctx.restore();
+}
+function proj3(p3){
+  let x=p3.x+pan.x,y=p3.y+pan.y,z=p3.z-cfg.storyH/2;
+  let cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+  let x1=x*cy-y*sy, y1=x*sy+y*cy; let y2=y1*cp-z*sp, z2=y1*sp+z*cp;
+  const s=mm2px(1)*0.85; return {x:canvas.clientWidth/2+x1*s,y:canvas.clientHeight/2-y2*s,depth:z2}
+}
+function draw3D(){
+ ctx.save();ctx.lineWidth=1;
+ for(const o of cadShapes()){
+  const geo=objectMesh(o);if(!geo)continue;ctx.strokeStyle=o.family==='steel'?'#91acc5':'#55728e';
+  const edges=new Set();for(const face of geo.faces)for(let i=0;i<face.length;i++){const a=face[i],b=face[(i+1)%face.length],key=[Math.min(a,b),Math.max(a,b)].join('_');if(edges.has(key))continue;edges.add(key);const A=proj3({x:geo.points[a][0],y:geo.points[a][1],z:geo.points[a][2]}),B=proj3({x:geo.points[b][0],y:geo.points[b][1],z:geo.points[b][2]});ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
+ }
+ for(const it of items){const A=proj3(it.a),B=proj3(it.b);ctx.strokeStyle=issueSet.has(it.id)?colors.alert:it.color;ctx.lineWidth=Math.max(1,mm2px(it.d));ctx.lineCap='round';ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
+ ctx.restore();
+}
+function draw(){
+  ensureCanvas(); ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+  if(viewMode==='plan') drawPlan(); else if(viewMode==='section') drawSection(); else if(!window.JC3D || !window.JC3D.ready) draw3D(); else window.JC3D.schedule();
+}
+function refreshSelection(){ if(selected&&!items.some(x=>x.id===selected))selected=null; if(window.JC3D) window.JC3D.markSelection();
+  const it=items.find(x=>x.id===selected); el('selName').textContent=it?it.name:'未選択';
+  el('applyAdj').disabled=it?.family==='tie';
+  if(it){ const off=basePos(it.parentId); el('adjX').value=off.x||0; el('adjY').value=off.y||0 } else { el('adjX').value=0; el('adjY').value=0 }
+}
+function screenToWorldPlan(px,py){ const scale=mm2px(1); return {x:(px-canvas.clientWidth/2)/scale - pan.x, y:-(py-canvas.clientHeight/2)/scale - pan.y} }
+function pointSegDist2D(p,a,b){ const vx=b.x-a.x, vy=b.y-a.y, wx=p.x-a.x, wy=p.y-a.y; const c1=vx*wx+vy*wy; if(c1<=0)return Math.hypot(p.x-a.x,p.y-a.y); const c2=vx*vx+vy*vy; if(c2<=c1)return Math.hypot(p.x-b.x,p.y-b.y); const t=c1/c2, x=a.x+t*vx, y=a.y+t*vy; return Math.hypot(p.x-x,p.y-y)}
+function pickItemPlan(px,py){
+  const w=screenToWorldPlan(px,py); const tol=14/mm2px(1); let hits=items.filter(it=>it.family!=='tie').map(it=>({it,d:pointSegDist2D(w,it.a,it.b)})).filter(o=>o.d<tol).sort((a,b)=>a.d-b.d);
+  if(!hits.length)return null; const key=hits.map(h=>h.it.id).join('|'); if(key===lastPickKey && Date.now()-lastPickCycle<700){ lastPickCycle=Date.now(); const cur=hits.findIndex(h=>h.it.id===selected); return hits[(cur+1+hits.length)%hits.length].it }
+  lastPickKey=key; lastPickCycle=Date.now(); return hits[0].it;
+}
+function pickItem3D(px,py){
+  let best=null,bestD=16; items.forEach(it=>{const A=proj3(it.a), B=proj3(it.b); const d=pointSegDist2D({x:px,y:py},{x:A.x,y:A.y},{x:B.x,y:B.y}); if(d<bestD){bestD=d; best=it}}); return best;
+}
+function itemMoveConstraint(it,dx,dy){
+  if(!it) return {x:dx,y:dy}; if(it.family==='tie')return {x:0,y:0}; if(it.family==='bx') return {x:0,y:dy}; if(it.family==='by') return {x:dx,y:0}; return {x:dx,y:dy};
+}
+// v1.9 pointer handling: drag threshold, 1 mm rounding, empty-area pan, pinch zoom (iPad),
+// a second finger cancels a bar move and restores its previous offset, 3D click-only selection.
+const pointers=new Map(),DRAG_PX=4;let pinch=null,secPan={x:0,y:0};
+function canvasXY(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+function restoreDragOrigin(){if(drag?.type!=='move'||!drag.moved)return;const k=moveId(drag.id);if(drag.had)adjust[k]=deepCopy(drag.orig);else delete adjust[k];generate();refreshSelection()}
+function zoomAt(newZoom,sx,sy){
+  newZoom=clamp(newZoom,.35,10);
+  if(viewMode==='plan'){const w=screenToWorldPlan(sx,sy);zoom=newZoom;const s=mm2px(1);pan.x=(sx-canvas.clientWidth/2)/s-w.x;pan.y=(canvas.clientHeight/2-sy)/s-w.y}
+  else if(viewMode==='section'){const k=newZoom/zoom,cx=canvas.clientWidth/2,cy=canvas.clientHeight/2;secPan.x=(sx-cx)-(sx-cx-secPan.x)*k;secPan.y=(sy-cy)-(sy-cy-secPan.y)*k;zoom=newZoom}
+  else zoom=newZoom;
+}
+canvas.addEventListener('pointerdown',e=>{
+  const p=canvasXY(e);pointers.set(e.pointerId,p);try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+  if(pointers.size===2){restoreDragOrigin();const [A,B]=[...pointers.values()];pinch={d0:Math.max(1,Math.hypot(A.x-B.x,A.y-B.y)),zoom0:zoom,mid:{x:(A.x+B.x)/2,y:(A.y+B.y)/2}};drag=null;draw();return}
+  if(pointers.size>2)return;
+  if(viewMode==='plan'){
+    const it=pickItemPlan(p.x,p.y);
+    if(it){selected=it.id;refreshSelection();const k=it.parentId;drag={type:'move',id:it.id,sx:p.x,sy:p.y,start:screenToWorldPlan(p.x,p.y),orig:deepCopy(basePos(k)),had:Object.hasOwn(adjust,k),moved:false};draw();return}
+    drag={type:'pan',sx:p.x,sy:p.y,pan0:{...pan}};return;
+  }
+  if(viewMode==='section'){drag={type:'pan',sx:p.x,sy:p.y,pan0:{...secPan}};return}
+  drag={type:'rotate',sx:p.x,sy:p.y,x:p.x,y:p.y,yaw,pitch,moved:false};
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;const p=canvasXY(e);pointers.set(e.pointerId,p);
+  if(pinch&&pointers.size>=2){const [A,B]=[...pointers.values()],mid={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+    zoomAt(pinch.zoom0*Math.hypot(A.x-B.x,A.y-B.y)/pinch.d0,mid.x,mid.y);
+    const dx=mid.x-pinch.mid.x,dy=mid.y-pinch.mid.y;pinch.mid=mid;
+    if(viewMode==='plan'){const s=mm2px(1);pan.x+=dx/s;pan.y-=dy/s}else if(viewMode==='section'){secPan.x+=dx;secPan.y+=dy}
+    draw();return}
+  if(!drag)return;const far=Math.hypot(p.x-drag.sx,p.y-drag.sy)>=DRAG_PX;
+  if(drag.type==='move'){
+    if(!drag.moved&&!far)return;drag.moved=true;
+    const w=screenToWorldPlan(p.x,p.y),it=items.find(x=>x.id===drag.id);if(!it)return;
+    const c=itemMoveConstraint(it,w.x-drag.start.x,w.y-drag.start.y);
+    setPos(it.id,Math.round(drag.orig.x+c.x),Math.round(drag.orig.y+c.y));generate();selected=it.id;refreshSelection();draw();
+  }else if(drag.type==='pan'){
+    if(viewMode==='plan'){const s=mm2px(1);pan.x=drag.pan0.x+(p.x-drag.sx)/s;pan.y=drag.pan0.y-(p.y-drag.sy)/s}
+    else{secPan.x=drag.pan0.x+(p.x-drag.sx);secPan.y=drag.pan0.y+(p.y-drag.sy)}draw();
+  }else if(drag.type==='rotate'){
+    if(far)drag.moved=true;yaw=drag.yaw+(p.x-drag.x)*0.01;pitch=clamp(drag.pitch+(p.y-drag.y)*0.01,-1.4,1.4);draw();
+  }
+});
+function endPointer(e){
+  if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);
+  if(pinch){if(pointers.size<2)pinch=null;drag=null;return}
+  if(drag?.type==='rotate'&&!drag.moved&&e.type==='pointerup'){const it=pickItem3D(drag.sx,drag.sy);if(it){selected=it.id;refreshSelection()}draw()}
+  if(e.type==='pointercancel')restoreDragOrigin();
+  drag=null;
+}
+window.addEventListener('pointerup',endPointer);window.addEventListener('pointercancel',endPointer);
+canvas.addEventListener('wheel',e=>{e.preventDefault();const p=canvasXY(e);zoomAt(zoom*(e.deltaY<0?1.08:.93),p.x,p.y);draw()},{passive:false});
+
+function bind(){
+  el('dxfBtn').onclick=exportDXF;el('rhinoBtn').onclick=export3DM;
+  el('steelSearch').addEventListener('input',()=>{updateCatalogUI();syncLevels();generate();draw()});
+  el('steelCatalog').addEventListener('change',()=>{cfg.steelSpec=Number(el('steelCatalog').value);updateUI();generate();draw()});
+  fields.forEach(f=>f.addEventListener('change',()=>{inputWarnings=[];if(f.dataset.k==='footingSystem'||['cornerN','cornerPX','cornerPY'].includes(f.dataset.k))clearFamily('an_');if(f.dataset.k==='steelShape'||f.dataset.k==='steelGrade')cfg.steelSpec=0;cfg[f.dataset.k]=f.type==='checkbox'?f.checked:(['partMode','columnType','baseType','pileType','hookDir','steelShape','steelGrade','footingSystem','neoModel','pileJoint','ftMode','bxOrder','byOrder','colJoint'].includes(f.dataset.k)?f.value:num(f.value)); if(f.dataset.k==='bxOrder')cfg.byOrder=cfg.bxOrder==='first'?'second':'first'; if(f.dataset.k==='byOrder')cfg.bxOrder=cfg.byOrder==='first'?'second':'first';  updateUI(); generate(); draw()}));
+  function copyBeam(from,to){
+    const parts=['W','H','NTop','NBot','Bar','Layers','LayerPitch','StirDia','StirPitch'];
+    parts.forEach(k=>cfg[to+k]=cfg[from+k]); cfg[to+'Off']=cfg[from+'Off'];cfg[to+'TopFL']=cfg[from+'TopFL'];
+    clearFamily(to+'_');updateUI();generate();draw();
+  }
+  el('copyXtoY').onclick=()=>copyBeam('by','bx');el('copyYtoX').onclick=()=>copyBeam('bx','by');
+  el('planTab').onclick=()=>setView('plan'); el('sectionTab').onclick=()=>setView('section'); el('view3dTab').onclick=()=>setView('view3d');
+  el('secAxis').onchange=()=>{secAxis=el('secAxis').value; draw()}; el('sliceZ').oninput=()=>{el('sliceLabel').textContent=`Z = ${el('sliceZ').value} mm`; draw()};
+  el('fitBtn').onclick=()=>{zoom=1;pan={x:0,y:0};secPan={x:0,y:0};yaw=-0.7;pitch=0.55;if(viewMode==='view3d'&&window.JC3D?.ready)window.JC3D.reset();draw()};
+  el('saveBtn').onclick=saveJSON; el('loadBtn').onclick=()=>el('fileInput').click();
+  el('fileInput').onchange=e=>{const file=e.target.files[0]; if(!file)return; const rd=new FileReader(); rd.onload=()=>{try{const o=JSON.parse(rd.result); loadModel(o); updateUI(); generate(); refreshSelection(); draw();}catch(err){alert('JSON読込に失敗しました: '+err.message)}}; rd.readAsText(file);e.target.value=''};
+  el('csvBtn').onclick=()=>{const q=v=>'"'+String(v).replaceAll('"','""')+'"';const rows=['itemA,itemB,clear_mm,required_mm,shortage_mm,idA,idB']; issues.forEach(it=>rows.push([q(it.a.name),q(it.b.name),it.clear.toFixed(1),it.req.toFixed(1),it.short.toFixed(1),q(it.a.id),q(it.b.id)].join(','))); download(`JointClear_3D_v${APP_VERSION}_clashes_${Date.now()}.csv`,'\ufeff'+rows.join('\r\n'),'text/csv;charset=utf-8')};
+  el('resetBtn').onclick=()=>{inputWarnings=[];cfg={...DEFAULT}; adjust={}; selected=null; updateUI(); generate(); refreshSelection(); draw()};
+  el('applyAdj').onclick=()=>{const cur=items.find(x=>x.id===selected);if(!cur||cur.family==='tie')return; setPos(selected,num(el('adjX').value),num(el('adjY').value)); generate(); refreshSelection(); draw()};
+  el('clearAdj').onclick=()=>{if(!selected||!items.some(x=>x.id===selected))return; delete adjust[moveId(selected)]; generate(); refreshSelection(); draw()};
+  el('equalPile').onclick=()=>{clearFamily('pile_'); generate(); draw()}; el('equalAnchors').onclick=()=>{clearFamily('an_'); generate(); draw()}; el('equalCols').onclick=()=>{clearFamily('low_'); clearFamily('up_');clearFamily('ped_'); generate(); draw()}; el('equalBX').onclick=()=>{clearFamily('bx_'); generate(); draw()}; el('equalBY').onclick=()=>{clearFamily('by_'); generate(); draw()};
+}
+function setView(v){viewMode=v;el('threeControls').style.display=v==='view3d'?'block':'none';document.querySelector('.view').classList.toggle('is-three',v==='view3d' && !!window.JC3D?.ready); if(v==='view3d' && window.JC3D)window.JC3D.schedule(); ['planTab','sectionTab','view3dTab'].forEach(id=>el(id).classList.remove('active')); el(v==='plan'?'planTab':v==='section'?'sectionTab':'view3dTab').classList.add('active'); el('tip').textContent=v==='plan'?'平面：鉄筋をドラッグで位置調整（1mm単位）。空白ドラッグで移動、ホイール／ピンチで拡大。同位置を連続クリックで重なり候補を切替。':v==='section'?'断面：中心断面を表示。ドラッグで移動、ホイール／ピンチで拡大。':'3D：ドラッグで回転、ホイール／ピンチでズーム。クリック（タップ）で部材選択。'; draw()}
+
+// CAD export v0.6: DXF 3D closed-surface triangular mesh; Rhino 8 3DM with capped cylinder extrusions.
+// Internal coordinates and exported units are millimeters (Z up).
+const CAD_LAYERS={
+  pile:['PILE_REBAR',35],rc:['COLUMN_REBAR',3],bx:['BEAM_X_REBAR',2],by:['BEAM_Y_REBAR',200],
+  anchor:['ANCHOR_BOLTS',7],concrete:['CONCRETE',8],steel:['STEEL_COLUMN',5],
+  clash:['CLASH_COMPONENTS',1],tie:['HOOPS_STIRRUPS',9]
+};
+function cadStatus(message,problem=false){let e=el('exportStatus');e.textContent=message;e.style.color=problem?'#ff939a':'#a9e7d5'}
+function cadBox(name,x0,y0,z0,x1,y1,z1,family='concrete'){
+ return {id:name,name,family,shape:'box',bounds:[x0,y0,z0,x1,y1,z1]};
+}
+function cadShapes(){
+ const shapes=[],column=(id,w,h,z0,z1)=>{if(z1>z0)shapes.push(cadBox(id,-w/2,-h/2,z0,w/2,h/2,z1))};
+ if(cfg.partMode==='foundation'){
+  column('PEDESTAL_CONCRETE',cfg.pedX,cfg.pedY,cfg.pedBottomFL,cfg.pedTopFL);
+  if(cfg.columnType==='rc'&&cfg.showUpperRC)column('UPPER_COLUMN_CONCRETE',cfg.upperX,cfg.upperY,cfg.upZ0,cfg.upZ1);
+ }else if(cfg.columnType==='rc'){
+  column('LOWER_COLUMN_CONCRETE',cfg.lowerX,cfg.lowerY,cfg.lowZ0,cfg.lowZ1);column('UPPER_COLUMN_CONCRETE',cfg.upperX,cfg.upperY,cfg.upZ0,cfg.upZ1);
+ }
+ const span=beamHalfSpan();
+ for(const axis of ['x','y']){
+  const p=axis==='x'?'bx':'by',w=cfg[p+'W'],h=cfg[p+'H'],zc=cfg[p+'CZ'],off=cfg[p+'Off'];
+  shapes.push(axis==='x'?cadBox('BEAM_X_CONCRETE',-span,off-w/2,zc-h/2,span,off+w/2,zc+h/2):cadBox('BEAM_Y_CONCRETE',off-w/2,-span,zc-h/2,off+w/2,span,zc+h/2));
+ }
+ if(cfg.partMode==='foundation')shapes.push({id:'PILE_CONCRETE',name:'PILE_CONCRETE',family:'concrete',shape:'cylinder',a:{x:cfg.pileX,y:cfg.pileY,z:cfg.pileHeadFL-cfg.pileConcreteDepth},b:{x:cfg.pileX,y:cfg.pileY,z:cfg.pileHeadFL},d:cfg.pileD});
+ if(cfg.columnType==='steel'){
+  // v2.0: 一般部は接合部を貫通（梁下端の低い方−900から）。基礎部は礎柱天端（ベースプレート上面）から。
+  const z0=cfg.partMode==='foundation'?cfg.pedTopFL:Math.min(cfg.bxCZ-cfg.bxH/2,cfg.byCZ-cfg.byH/2)-900,z1=cfg.storyH,dim=steelDims();
+  const steelBox=(id,x0,y0,x1,y1)=>shapes.push(cadBox(id,x0,y0,z0,x1,y1,z1,'steel'));
+  if(cfg.steelShape==='chs')shapes.push({id:'STEEL_CHS',name:'STEEL_CHS',family:'steel',shape:'tube',a:{x:0,y:0,z:z0},b:{x:0,y:0,z:z1},d:dim.x,t:dim.t});
+  else if(cfg.steelShape==='h'){
+   steelBox('STEEL_H_FLANGE_1',-dim.x/2,-dim.y/2,dim.x/2,-dim.y/2+dim.tf);steelBox('STEEL_H_FLANGE_2',-dim.x/2,dim.y/2-dim.tf,dim.x/2,dim.y/2);steelBox('STEEL_H_WEB',-dim.tw/2,-dim.y/2+dim.tf,dim.tw/2,dim.y/2-dim.tf);
+  }else{
+   const t=dim.t;steelBox('STEEL_RHS_1',-dim.x/2,-dim.y/2,dim.x/2,-dim.y/2+t);steelBox('STEEL_RHS_2',-dim.x/2,dim.y/2-t,dim.x/2,dim.y/2);steelBox('STEEL_RHS_3',-dim.x/2,-dim.y/2+t,-dim.x/2+t,dim.y/2-t);steelBox('STEEL_RHS_4',dim.x/2-t,-dim.y/2+t,dim.x/2,dim.y/2-t);
+  }
+  if(cfg.partMode==='foundation')shapes.push(cadBox('BASE_PLATE',-cfg.bpX/2,-cfg.bpY/2,cfg.pedTopFL-cfg.bpT,cfg.bpX/2,cfg.bpY/2,cfg.pedTopFL,'steel'));
+ }
+ return shapes;
+}
+function shapeBounds(o){
+ if(o.shape==='box')return o.bounds;
+ const r=o.d/2;return [o.a.x-r,o.a.y-r,Math.min(o.a.z,o.b.z),o.a.x+r,o.a.y+r,Math.max(o.a.z,o.b.z)];
+}
+function cadSegments(){
+ // Keep individual ID, XY overrides and current clash state from the live model.
+ return items.map(it=>({...it,shape:'cylinder',clash:issueSet.has(it.id)}));
+}
+function cadExportObjects(){
+ // A second layer represents red clashing components; no phantom geometry is manufactured.
+ const segs=cadSegments();const shapes=cadShapes();
+ return [...shapes,...segs,...segs.filter(o=>o.clash).map(o=>({...o,family:'clash',name:'干渉:'+o.name,id:o.id+'_clash'}))];
+}
+function cadMeshCylinder(a,b,r,sides=20){
+ const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,len=Math.hypot(dx,dy,dz);
+ if(len<1e-5||r<=0)return null;
+ const w={x:dx/len,y:dy/len,z:dz/len};
+ const ref=Math.abs(w.z)<0.9?{x:0,y:0,z:1}:{x:1,y:0,z:0};
+ const u={x:w.y*ref.z-w.z*ref.y,y:w.z*ref.x-w.x*ref.z,z:w.x*ref.y-w.y*ref.x};
+ const ul=Math.hypot(u.x,u.y,u.z);u.x/=ul;u.y/=ul;u.z/=ul;
+ const v={x:w.y*u.z-w.z*u.y,y:w.z*u.x-w.x*u.z,z:w.x*u.y-w.y*u.x};
+ const pts=[];for(let end of [a,b])for(let i=0;i<sides;i++){const t=2*Math.PI*i/sides,c=Math.cos(t),s=Math.sin(t);pts.push([end.x+r*(c*u.x+s*v.x),end.y+r*(c*u.y+s*v.y),end.z+r*(c*u.z+s*v.z)])}
+ const faces=[];for(let i=0;i<sides;i++){const j=(i+1)%sides;faces.push([i,j,sides+j,sides+i]);faces.push([sides-1,sides-1,0,i]);faces.push([sides,sides+i,sides+j,sides]);}
+ // Triangular caps as fans with separate center vertices avoid coincident degenerate cap faces.
+ faces.length=0;pts.push([a.x,a.y,a.z],[b.x,b.y,b.z]);
+ for(let i=0;i<sides;i++){let j=(i+1)%sides;faces.push([i,j,sides+j,sides+i]);faces.push([sides*2,j,i]);faces.push([sides*2+1,sides+i,sides+j])}
+ return {points:pts,faces};
+}
+function cadMeshBox(bb){
+ const [x0,y0,z0,x1,y1,z1]=bb;
+ const pts=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+ const faces=[[3,2,1,0],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+ return {points:pts,faces};
+}
+function cadMeshTube(o,sides=40){
+ const r=o.d/2,ri=Math.max(0,r-o.t),z0=o.a.z,z1=o.b.z,points=[],faces=[];
+ for(const z of [z0,z1])for(const radius of [r,ri])for(let i=0;i<sides;i++){const t=2*Math.PI*i/sides;points.push([o.a.x+radius*Math.cos(t),o.a.y+radius*Math.sin(t),z])}
+ for(let i=0;i<sides;i++){const j=(i+1)%sides;
+  faces.push([i,j,2*sides+j,2*sides+i],[sides+j,sides+i,3*sides+i,3*sides+j],[j,i,sides+i,sides+j],[2*sides+i,2*sides+j,3*sides+j,3*sides+i]);
+ }
+ return {points,faces};
+}
+function objectMesh(obj){return obj.shape==='box'?cadMeshBox(obj.bounds):obj.shape==='tube'?cadMeshTube(obj):cadMeshCylinder(obj.a,obj.b,obj.d/2)}
+// v2.0: DXF R12 (AC1009) ASCII, CRLF. No handles are required in R12, so the file stays minimal but valid:
+// TABLES (LTYPE CONTINUOUS, LAYER, STYLE STANDARD) + ENTITIES (LINE, CIRCLE, POLYLINE/VERTEX/SEQEND, TEXT).
+// R12 has no $INSUNITS; coordinates are millimetres.
+function dxfNum(v){v=Number(v);if(!Number.isFinite(v))throw new Error('DXF座標が数値ではありません');const r=Math.abs(v)<5e-5?0:Math.round(v*10000)/10000;return String(r)}
+function dxfPairs(...a){let out='';for(let i=0;i<a.length;i+=2)out+=`${a[i]}\r\n${typeof a[i+1]==='number'?dxfNum(a[i+1]):a[i+1]}\r\n`;return out}
+function exportDXF(){
+ try{
+ const P=dxfPairs,shapes=cadShapes(),segs=cadExportObjects().filter(o=>o.meta),bounds=shapes.map(shapeBounds);
+ const extent=Math.max(2000,...bounds.flat().map(Math.abs)),sheetSpan=extent*5;
+ const layers=[['0',7],...Object.values(CAD_LAYERS),['TEXT_ANNOTATIONS',7]];
+ let out=P(0,'SECTION',2,'HEADER',9,'$ACADVER',1,'AC1009',9,'$INSBASE',10,0,20,0,30,0,0,'ENDSEC');
+ out+=P(0,'SECTION',2,'TABLES');
+ out+=P(0,'TABLE',2,'LTYPE',70,1,0,'LTYPE',2,'CONTINUOUS',70,0,3,'Solid line',72,65,73,0,40,0,0,'ENDTAB');
+ out+=P(0,'TABLE',2,'LAYER',70,layers.length);for(const [name,color] of layers)out+=P(0,'LAYER',2,name,70,0,62,color,6,'CONTINUOUS');out+=P(0,'ENDTAB');
+ out+=P(0,'TABLE',2,'STYLE',70,1,0,'STYLE',2,'STANDARD',70,0,40,0,41,1,50,0,71,0,42,2.5,3,'txt',4,'',0,'ENDTAB');
+ out+=P(0,'ENDSEC',0,'SECTION',2,'BLOCKS',0,'ENDSEC',0,'SECTION',2,'ENTITIES');
+ const line=(layer,x1,y1,x2,y2)=>{out+=P(0,'LINE',8,layer,10,x1,20,y1,30,0,11,x2,21,y2,31,0)};
+ const circle=(layer,x,y,r)=>{if(r>0)out+=P(0,'CIRCLE',8,layer,10,x,20,y,30,0,40,r)};
+ const rect=(layer,x0,y0,x1,y1)=>{out+=P(0,'POLYLINE',8,layer,66,1,70,1,10,0,20,0,30,0);for(const [x,y] of [[x0,y0],[x1,y0],[x1,y1],[x0,y1]])out+=P(0,'VERTEX',8,layer,10,x,20,y,30,0);out+=P(0,'SEQEND',8,layer)};
+ const project=(v,axis,ox)=>axis==='plan'?[ox+v.x,v.y]:[ox+(axis==='x'?v.y:v.x),v.z];
+ let rebar=0,clash=0;
+ for(const [axis,ox,label] of [['plan',0,'PLAN (X-Y)'],['x',sheetSpan,'ELEVATION (Y-Z)'],['y',sheetSpan*2,'ELEVATION (X-Z)']]){
+  out+=P(0,'TEXT',8,'TEXT_ANNOTATIONS',10,ox-550,20,extent+400,30,0,40,75,1,label+' / mm');
+  for(const o of shapes){const layer=CAD_LAYERS[o.family][0],bb=shapeBounds(o);
+   if(axis==='plan'&&o.shape!=='box'){circle(layer,ox+o.a.x,o.a.y,o.d/2);if(o.shape==='tube')circle(layer,ox+o.a.x,o.a.y,o.d/2-o.t)}
+   else{const [a,b]=axis==='plan'?[[ox+bb[0],bb[1]],[ox+bb[3],bb[4]]]:[[ox+bb[axis==='x'?1:0],bb[2]],[ox+bb[axis==='x'?4:3],bb[5]]];rect(layer,a[0],a[1],b[0],b[1]);if(o.shape==='tube'&&axis!=='plan'){const u=ox+(axis==='x'?o.a.y:o.a.x),r=o.d/2-o.t;line(layer,u-r,bb[2],u-r,bb[5]);line(layer,u+r,bb[2],u+r,bb[5])}}
+  }
+  for(const o of segs){const layer=CAD_LAYERS[o.family]?.[0]||'CONCRETE',[ax,ay]=project(o.a,axis,ox),[bx,by]=project(o.b,axis,ox);if(Math.hypot(ax-bx,ay-by)<1e-6)circle(layer,ax,ay,o.d/2);else line(layer,ax,ay,bx,by);if(axis==='plan'){if(o.family==='clash')clash++;else rebar++}}
+ }
+ out+=P(0,'ENDSEC',0,'EOF');download(`JointClear_3D_v${APP_VERSION}_2D.dxf`,out,'application/dxf');cadStatus(`DXF出力完了（R12形式）：共通モデルの平面・Y-Z投影・X-Z投影。鉄筋線分 ${rebar} 本（帯筋を含む）×3図、干渉レイヤ ${clash} 本。mm単位。断面切断ではなく全体投影です。`);
+ }catch(e){console.error(e);cadStatus('DXF出力エラー: '+e.message,true)}
+}
+let rhinoFactoryPromise=null,rhinoModulePromise=null;
+function rhinoFactory(){
+ if(window.rhino3dm)return Promise.resolve(window.rhino3dm);
+ if(rhinoFactoryPromise)return rhinoFactoryPromise;
+ rhinoFactoryPromise=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js';
+   script.onload=()=>window.rhino3dm?resolve(window.rhino3dm):reject(new Error('rhino3dm の初期化関数が見つかりません'));
+   script.onerror=()=>reject(new Error('3DMライブラリを読み込めません。ネット接続を確認してください'));document.head.appendChild(script);
+ }).catch(e=>{rhinoFactoryPromise=null;throw e});return rhinoFactoryPromise;
+}
+function rhinoClosedMesh(rhino,geometry){
+ const mesh=new rhino.Mesh();for(const p of geometry.points)mesh.vertices().add(p[0],p[1],p[2]);
+ for(const f of geometry.faces){if(f.length===3)mesh.faces().addTriFace(f[0],f[1],f[2]);else mesh.faces().addQuadFace(f[0],f[1],f[2],f[3]);}
+ mesh.normals().computeNormals();mesh.compact();return mesh;
+}
+function rhinoCylinderBrep(rhino,obj){
+ const a=obj.a,b=obj.b,dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,h=Math.hypot(dx,dy,dz);if(h<1e-5||obj.d<=0)return null;
+ const circle=new rhino.Circle(obj.d/2),cyl=new rhino.Cylinder(circle,h),geo=rhino.Extrusion.createCylinderExtrusion(cyl,true,true);cyl.delete();circle.delete();if(!geo)return null;
+ const sin=Math.hypot(dx,dy)/h,cos=dz/h;
+ if(sin>1e-10||cos<0){const axis=sin>1e-10?[-dy,dx,0]:[1,0,0],rot=rhino.Transform.rotation(Math.atan2(sin,cos),axis,[0,0,0]);geo.transform(rot);rot.delete()}
+ const tr=rhino.Transform.translationXYZ(a.x,a.y,a.z);geo.transform(tr);tr.delete();return geo;
+}
+async function export3DM(){
+ const btn=el('rhinoBtn');btn.disabled=true;cadStatus('Rhino 3DM生成用ライブラリを読み込み中…');
+ try{
+  if(!rhinoModulePromise)rhinoModulePromise=rhinoFactory().then(factory=>factory()).catch(e=>{rhinoModulePromise=null;throw e});const rhino=await rhinoModulePromise;const doc=new rhino.File3dm();doc.settings().modelUnitSystem=rhino.UnitSystem.Millimeters;
+  const map={};for(const [key,[name,color]] of Object.entries(CAD_LAYERS)){
+   const hex=LAYER_RGB[key]||'#a6b7c6',layer=new rhino.Layer();layer.name=name;layer.color={r:parseInt(hex.slice(1,3),16),g:parseInt(hex.slice(3,5),16),b:parseInt(hex.slice(5,7),16),a:255};
+   map[key]=doc.layers().add(layer);layer.delete();
+  }
+  const shapes=cadExportObjects();let breps=0,meshes=0;
+  for(const o of shapes){
+   const att=new rhino.ObjectAttributes();att.name=o.name;att.layerIndex=map[o.family]??map.concrete;
+   let geo=null;
+   if(o.shape==='cylinder'){
+    try{geo=rhinoCylinderBrep(rhino,o)}catch(err){console.warn('Brep fallback',o.name,err)}
+   }
+   if(!geo){const m=objectMesh(o);if(!m)continue;geo=rhinoClosedMesh(rhino,m);meshes++}else breps++;
+   doc.objects().add(geo,att);geo.delete();att.delete();
+  }
+  const bytes=doc.toByteArray();doc.delete();if(!bytes||bytes.length<100)throw new Error('3DMファイルが空です');
+  const blob=new Blob([bytes],{type:'application/octet-stream'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`JointClear_3D_v${APP_VERSION}.3dm`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  cadStatus(`3DM出力完了：${shapes.length}オブジェクト、閉じた円柱Extrusion ${breps}個 / 閉じたMesh ${meshes}個、単位mm（ファイル設定に保存）。`);
+ }catch(e){console.error(e);cadStatus('3DM出力エラー: '+e.message,true)}finally{btn.disabled=false}
+}
+
+window.JC3D_DATA=()=>({cfg,items,issues,issueSet,selected,viewMode,shapes:cadShapes(),warnings:modelWarnings,colors});window.JC_GEOMETRY=objectMesh;window.JC3D_SELECT=id=>{selected=id;refreshSelection();draw()};
+window.STEEL_SHAPE_API={h:()=>{const d=steelDims();return {x:d.x,y:d.y,tw:d.tw,tf:d.tf}},rhsT:()=>steelDims().t};
+
+const CHANGELOG=[
+ ['v2.0','一般部RC柱に「上下柱主筋の納まり（通し／定着）」を追加。通し（初期値：下部柱FL-1800〜0、上部柱0〜1600）は上下主筋の端部同士の接続を干渉から除外し、位置不一致を警告。定着はフックを主筋端部に付け、接合部面から端部までの直線長が定着長未満なら警告。フック方向を辺基準に修正（内向き＝辺に直交、隅筋は対角／時計・反時計回り＝辺に沿って断面内側）。v1.9以前のJSONは「定着」として読込。一般部S柱の鋼管を接合部を貫通する範囲（梁下端−900から）で生成。メーカー柱脚の1コーナー3本配置をコーナーごとに鏡像化。主筋が断面不足・レベル逆転で生成されない柱はフープも生成しない（本数0は警告）。DXFをR12（AC1009）形式・CRLFに変更。3D表示と3DMレイヤ色を凡例色に統一。存在しない鉄筋を選択したまま「反映」すると不要な調整値が保存される不具合、重なり候補の連続切替、メーカー柱脚時のアンカー欄の名称、Zスライダー範囲、3DMライブラリ再利用を修正。'],
+ ['v1.9','実ブラウザ検証に基づく修正：先組・後組の段調整を、両方向の段が実際に接近する場合だけ適用（梁天端差・梁せい差のある梁で、干渉しない段まで移動していた不具合を修正）。平面の空白ドラッグで表示移動、ホイール・ピンチ拡大（断面図も対応）、2本指操作時は鉄筋移動を取り消し、ドラッグ開始に4px遊びと1mm丸め。3Dの回転ドラッグ終了時に部材選択が変わる不具合を修正。干渉CSVをExcel向けBOM付きUTF-8にし、鉄筋IDを末尾列に追加。F.T.Pileを場所打ち杭で選択した場合の警告、同名JSONの再読込、iPadでのダウンロード安定化。'],
+ ['v1.8','高優先度レビュー対応：RCの不要アンカーを除去、上部RC柱切替を移設、杭筋・アンカー上下端を保持、杭筋とフックを修正、多段梁全段の高さ調整、帯筋の共通モデル化・重なり判定・CAD出力、礎柱・杭・柱脚の躯体形状統一、本数・数値の検証。'],
+  ['v1.7','基礎部の上部RC柱を明示的にON/OFFできるよう変更（初期OFF）。礎柱主筋と上部柱主筋の接続端の重複警告を抑制。'],
+ ['v1.6','画面表示バージョン修正、S柱でも礎柱主筋・フープ・躯体を保持、基本設定の重複柱寸法を削除、アプリ内更新履歴を追加'],
+ ['v1.5','F.T.Pile引抜鋼棒有無、在来/メーカー柱脚、基礎部の上部RC柱と礎柱フープ描画を修正'],
+ ['v1.4','断面図の表示範囲と投影方法を改良、梁段間隔を主筋径の2.5倍に固定'],
+ ['v1.3','先組/後組連動、スターラップ・フープピッチ選択、かぶり50mm統一'],
+ ['v1.2','礎柱・上下柱の独立入力、F.T.Pile、梁条件コピーを追加'],
+ ['v1.1','BCR/BCP・ロールH・電縫鋼管の候補を追加'],
+ ['v1.0','杭と礎柱描画を整理、S柱・柱脚設定を拡張'],
+ ['v0.9','FLレベル、必要あき自動計算、S柱断面候補を追加'],
+ ['v0.8','3Dの立体鉄筋かご・フープ・スターラップ表示を強化'],
+ ['v0.7','DXFを平面・断面2D出力に変更'],
+ ['v0.6','DXF・Rhino 3DM出力を追加'],
+ ['v0.5','基礎部/一般部、RC/S柱、断面表示を追加'],
+ ['v0.4','平面ドラッグ・多段配筋・個別調整を追加'],
+ ['v0.3','既製杭/場所打ち杭の切替を追加'],
+ ['v0.2','杭頭・基礎梁・柱脚を含む3D試作'],
+ ['v0.1','RC接合部干渉チェックの初期試作']
+];
+function initHistory(){
+  const dlg=el('historyDialog');
+  el('historyContent').innerHTML=CHANGELOG.map(([v,detail])=>`<div style="padding:9px 0;border-bottom:1px solid #344860"><b style="color:#77d6ff">${v}</b><div>${detail}</div></div>`).join('');
+  el('historyBtn').onclick=()=>dlg.showModal();
+  el('closeHistory').onclick=()=>dlg.close();
+  dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
+}
+
+function init(){document.title='JointClear 3D v'+APP_VERSION;el('appVersion').textContent='v'+APP_VERSION;initHistory();updateUI(); bind(); generate(); refreshSelection(); draw()}
+window.addEventListener('resize',draw); init();
+</script>
+
+<script type="module">
+// Rendering only. Existing 2D editing, clash logic, and CAD exporters remain unchanged.
+const host=document.getElementById('threeHost');
+const status=document.getElementById('threeStatus');
+const display={rc:true,bx:true,by:true,pile:true,anchor:true,tie:true,concrete:true,clash:true};
+let api=null,THREE,scene,camera,renderer,meshes=[],group,raycaster,pointer,controls;
+let needsBuild=false,disposed=false,alpha=.18;
+let downAt=null,activeTouches=0; // v1.9: select on click only, not at the end of an orbit drag or pinch
+const setStatus=x=>status.textContent=x;
+function start(){
+  // CDN import required only for richer 3D mode; canvas fallback continues to function offline.
+  return Promise.all([
+    import('three'),
+    import('three/addons/controls/OrbitControls.js')
+  ]).then(([T,C])=>{
+    THREE=T;raycaster=new THREE.Raycaster();pointer=new THREE.Vector2();
+    renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+    renderer.setClearColor(0x07111d,0);host.appendChild(renderer.domElement);
+    scene=new THREE.Scene();scene.background=new THREE.Color('#102133');
+    camera=new THREE.PerspectiveCamera(42,1,10,50000);camera.up.set(0,0,1);
+    controls=new C.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;
+    controls.target.set(0,0,550);camera.position.set(2600,-3150,2200);controls.update();
+    scene.add(new THREE.HemisphereLight(0xffffff,0x43556b,2.3));
+    const light=new THREE.DirectionalLight(0xffffff,2);light.position.set(-1200,-1700,4000);scene.add(light);
+    const grid=new THREE.GridHelper(4800,24,0x56758a,0x294157);grid.rotation.x=Math.PI/2;grid.position.z=-450;scene.add(grid);
+    group=new THREE.Group();scene.add(group);
+    renderer.domElement.addEventListener('pointerdown',e=>{downAt=activeTouches===0?{x:e.clientX,y:e.clientY,id:e.pointerId}:{multi:true};activeTouches++});renderer.domElement.addEventListener('pointerup',e=>{activeTouches=Math.max(0,activeTouches-1);const d=downAt;if(activeTouches===0)downAt=null;if(d&&!d.multi&&d.id===e.pointerId&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<5&&activeTouches===0)selectAtPointer(e)});renderer.domElement.addEventListener('pointercancel',()=>{downAt=null;activeTouches=0});
+    window.addEventListener('resize',fit);
+    api.ready=true;document.querySelector('.view').classList.toggle('is-three',window.JC3D_DATA().viewMode==='view3d');
+    setStatus('立体表示 利用可能');fit();rebuild();loop();
+  }).catch(err=>{console.error(err);setStatus('3D読込失敗：簡易表示に切替');document.querySelector('.view').classList.remove('is-three');});
+}
+function fit(){if(!renderer)return;const r=host.getBoundingClientRect();if(!r.width||!r.height)return; renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+function disposeGroup(){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose()}});group.clear();meshes=[]}
+function material(hex,opacity=1){return new THREE.MeshStandardMaterial({color:hex,roughness:.76,metalness:.12,transparent:opacity<1,opacity,depthWrite:opacity>=1,side:THREE.DoubleSide})}
+function cylinder(a,b,diam,color,kind,id){
+ const A=new THREE.Vector3(a.x,a.y,a.z),B=new THREE.Vector3(b.x,b.y,b.z);const axis=new THREE.Vector3().subVectors(B,A);const h=axis.length();if(h<.001)return;
+ const geo=new THREE.CylinderGeometry(Math.max(1,diam/2),Math.max(1,diam/2),h,10,1,false);const obj=new THREE.Mesh(geo,material(color));obj.position.copy(A).add(B).multiplyScalar(.5);
+ obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis.normalize());obj.userData={kind,id};group.add(obj);if(id)meshes.push(obj)
+}
+function rebuild(){if(!api?.ready)return;disposeGroup();const {items,issueSet,selected,shapes}=window.JC3D_DATA();
+ for(const o of shapes){if(o.family==='concrete'&&!display.concrete)continue;
+  const data=window.JC_GEOMETRY(o);if(!data)continue;const flat=[];
+  for(const f of data.faces)for(let k=1;k<f.length-1;k++)for(const ix of [f[0],f[k],f[k+1]])flat.push(...data.points[ix]);
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(flat,3));geo.computeVertexNormals();
+  const obj=new THREE.Mesh(geo,material(o.family==='steel'?'#8296ac':'#a6b7c6',o.family==='steel'?.85:alpha));obj.userData={kind:o.family};group.add(obj);
+ }
+ const palette=window.JC3D_DATA().colors; // v2.0: 凡例と同じ色
+ for(const it of items){if(!display[it.family])continue;const clash=issueSet.has(it.id)&&display.clash,chosen=selected===it.id;cylinder(it.a,it.b,it.d,chosen?palette.selected:clash?palette.alert:palette[it.family],it.family,it.id)}
+ fit();
+}
+function selectAtPointer(e){if(!raycaster||!meshes.length)return;const r=renderer.domElement.getBoundingClientRect();pointer.x=2*(e.clientX-r.left)/r.width-1;pointer.y=1-2*(e.clientY-r.top)/r.height;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects(meshes,false);if(hits.length && hits[0].object.userData.id)window.JC3D_SELECT(hits[0].object.userData.id)}
+function loop(){if(disposed)return;requestAnimationFrame(loop);controls.update(); if(needsBuild){needsBuild=false;rebuild()} renderer.render(scene,camera)}
+api=window.JC3D={ready:false,schedule(){needsBuild=true},markSelection(){needsBuild=true},reset(){if(!controls)return;camera.position.set(2600,-3150,2200);controls.target.set(0,0,550);controls.update()}};
+document.querySelectorAll('[data-show]').forEach(el=>el.addEventListener('change',()=>{display[el.dataset.show]=el.checked;api.schedule()}));
+document.getElementById('concreteAlpha').addEventListener('input',e=>{alpha=Number(e.target.value)/100;document.getElementById('alphaText').textContent=e.target.value+'%';api.schedule()});
+document.getElementById('threeReset').onclick=()=>api.reset();
+start();
+</script>
+</body>
+</html>
